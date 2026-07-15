@@ -662,21 +662,27 @@ var state = {
 ========================================================= */
 var memoryFallback={};
 var storageWarned=false;
-var noStorage = (typeof window.storage === 'undefined');
+var noStorage = (typeof window.localStorage === 'undefined');
 
 function warnNoStorage(){
   if(storageWarned) return;
   storageWarned=true;
-  showToast('Este ambiente não guarda dados entre sessões — o que fizeres fica só nesta janela.', 'error');
+  showToast('O teu navegador bloqueia a gravação — os dados não serão guardados após o refresh.', 'error');
 }
 async function storageGet(key){
   if(noStorage){ warnNoStorage(); return (key in memoryFallback)? {value:memoryFallback[key]} : null; }
-  try{ return await window.storage.get(key); }
+  try{ 
+    var result = window.localStorage.getItem('torneio_ilog_' + key);
+    return result !== null ? {value: result} : null;
+  }
   catch(e){ return null; }
 }
 async function storageSet(key, value){
   if(noStorage){ warnNoStorage(); memoryFallback[key]=value; return {value:value}; }
-  try{ return await window.storage.set(key, value); }
+  try{ 
+    window.localStorage.setItem('torneio_ilog_' + key, value);
+    return {value:value}; 
+  }
   catch(e){ flashError(); return null; }
 }
 
