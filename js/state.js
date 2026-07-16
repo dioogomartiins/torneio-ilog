@@ -4,7 +4,7 @@ import { generateSchedule } from './algorithms.js';
 // ---------------------------------------------------------------------------
 // Constantes
 // ---------------------------------------------------------------------------
-export const SNAPSHOT_VERSION = 4;
+export const SNAPSHOT_VERSION = 5;
 export const MAX_TEAMS = 32;
 const DEFAULT_COLOR = '#2F7A4F';
 
@@ -19,7 +19,7 @@ export function setCurrentTheme(t) { currentTheme = t; }
 // ---------------------------------------------------------------------------
 export function defaultConfig() {
   return {
-    nome: 'Torneio 2026',
+    nome: 'Futebol ILOG',
     numEquipas: 8,
     numGrupos: 1,
     numVoltas: 2,
@@ -76,6 +76,8 @@ export const state = {
   scheduleTeamCount: 0,
   scheduleVoltas: 0,
   results: {},
+  players: [],          // Base de dados global de jogadores
+  jogosSingulares: [],  // Histórico de jogos singulares
 };
 
 // ---------------------------------------------------------------------------
@@ -125,6 +127,23 @@ export async function storageSet(key, value) {
 // ---------------------------------------------------------------------------
 // Snapshot — serialização / deserialização completa do estado
 // ---------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Jogadores — helpers de normalização
+// ---------------------------------------------------------------------------
+export function defaultPlayerAttrs() {
+  return { velocidade: 0, finalizacao: 0, passe: 0, drible: 0, defesa: 0, fisico: 0 };
+}
+
+export function normalizePlayer(p) {
+  if (!p || typeof p !== 'object') return null;
+  return {
+    id: p.id || crypto.randomUUID(),
+    nome: p.nome || '',
+    teamIdx: (p.teamIdx !== undefined && p.teamIdx !== null) ? p.teamIdx : null,
+    atributos: Object.assign(defaultPlayerAttrs(), p.atributos || {}),
+  };
+}
+
 export function buildSnapshot() {
   return {
     version: SNAPSHOT_VERSION,
@@ -137,6 +156,8 @@ export function buildSnapshot() {
     scheduleTeamCount: state.scheduleTeamCount,
     scheduleVoltas: state.scheduleVoltas,
     results: JSON.parse(JSON.stringify(state.results)),
+    players: JSON.parse(JSON.stringify(state.players)),
+    jogosSingulares: JSON.parse(JSON.stringify(state.jogosSingulares)),
   };
 }
 
@@ -156,6 +177,8 @@ export function applySnapshot(s) {
   state.scheduleTeamCount = s.scheduleTeamCount || state.config.numEquipas;
   state.scheduleVoltas = s.scheduleVoltas || state.config.numVoltas;
   state.results = s.results || {};
+  state.players = (s.players || []).map(normalizePlayer).filter(Boolean);
+  state.jogosSingulares = s.jogosSingulares || [];
 }
 
 // ---------------------------------------------------------------------------
@@ -190,6 +213,18 @@ export async function persistSchedule() {
 
 export async function persistResults() {
   await storageSet('results', JSON.stringify(state.results));
+  flashSaved();
+  await persistBackup();
+}
+
+export async function persistPlayers() {
+  await storageSet('players', JSON.stringify(state.players));
+  flashSaved();
+  await persistBackup();
+}
+
+export async function persistJogosSingulares() {
+  await storageSet('jogos-singulares', JSON.stringify(state.jogosSingulares));
   flashSaved();
   await persistBackup();
 }
@@ -248,11 +283,15 @@ export async function loadState() {
   let sc = null;
   let rs = null;
   let bk = null;
+  let pl = null;
+  let js = null;
 
   try { const r = await storageGet('config-teams'); ct = r ? JSON.parse(r.value) : null; } catch { ct = null; }
-  try { const r = await storageGet('schedule');     sc = r ? JSON.parse(r.value) : null; } catch { sc = null; }
-  try { const r = await storageGet('results');      rs = r ? JSON.parse(r.value) : null; } catch { rs = null; }
-  try { const r = await storageGet('backup');       bk = r ? JSON.parse(r.value) : null; } catch { bk = null; }
+  try { const r = await storageGet('schedule'); sc = r ? JSON.parse(r.value) : null; } catch { sc = null; }
+  try { const r = await storageGet('results'); rs = r ? JSON.parse(r.value) : null; } catch { rs = null; }
+  try { const r = await storageGet('backup'); bk = r ? JSON.parse(r.value) : null; } catch { bk = null; }
+  try { const r = await storageGet('players'); pl = r ? JSON.parse(r.value) : null; } catch { pl = null; }
+  try { const r = await storageGet('jogos-singulares'); js = r ? JSON.parse(r.value) : null; } catch { js = null; }
 
   const hasIndividualData = ct && ct.config && ct.teams;
 
@@ -272,17 +311,23 @@ export async function loadState() {
     }
 
     state.results = rs || {};
+    state.players = (pl || []).map(normalizePlayer).filter(Boolean);
+    state.jogosSingulares = js || [];
   } else if (validateSnapshot(bk)) {
     applySnapshot(bk);
     await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams, squads: state.squads }));
     await storageSet('schedule', JSON.stringify({ schedule: state.schedule, roundsMeta: state.roundsMeta, scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas }));
     await storageSet('results', JSON.stringify(state.results));
+    await storageSet('players', JSON.stringify(state.players));
+    await storageSet('jogos-singulares', JSON.stringify(state.jogosSingulares));
     showToast('Estado restaurado a partir do backup automático.', 'ok');
     flashBackup(bk.exportedAt);
   } else {
     state.config = defaultConfig();
     state.teams = defaultTeams();
     state.squads = defaultSquads();
+    state.players = [];
+    state.jogosSingulares = [];
     applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
     await persistConfigTeams();
     await persistSchedule();

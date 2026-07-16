@@ -1,7 +1,7 @@
-import { state, persistConfigTeams, loadState, persistSchedule, persistResults, persistBackup, currentTheme, setCurrentTheme, exportJSON, importJSON, applyGeneratedSchedule } from './state.js';
-import { dom, cacheDom, renderAll, refreshComputed, renderScheduleHint, renderSquadList, renderSquadsDropdown, renderCalendar, renderResults, showToast, flashSaved, openConfirm, closeConfirm, switchTab, confirmCallback, openScorerModal, openPlayerProfile, computeStatsSummary } from './ui.js';
+import { state, persistConfigTeams, loadState, persistSchedule, persistResults, persistBackup, persistPlayers, persistJogosSingulares, currentTheme, setCurrentTheme, exportJSON, importJSON, applyGeneratedSchedule } from './state.js';
+import { dom, cacheDom, renderAll, refreshComputed, renderScheduleHint, renderSquadList, renderSquadsDropdown, renderCalendar, renderResults, showToast, flashSaved, openConfirm, closeConfirm, switchTab, confirmCallback, openScorerModal, openPlayerProfile, computeStatsSummary, renderPlayersList, openPlayerModal, renderSquadPlayerFromDBDropdown, renderDraftPlayerList, renderDraftTeams, renderSingularHistorico, currentDraft } from './ui.js';
 import { clamp, numOr } from './utils.js';
-import { bergerRounds } from './algorithms.js';
+import { bergerRounds, snakeDraft } from './algorithms.js';
 
 // ---------------------------------------------------------------------------
 // Handlers de configuração
@@ -45,28 +45,31 @@ export function onTeamPropChange(e) {
   refreshComputed();
 }
 
-export function onAddPlayer() {
+export function onAddPlayerFromDB() {
   const tIdx = dom.squadTeamSelect.value;
   const num  = parseInt(dom.squadPlayerNum.value, 10);
-  const name = dom.squadPlayerName.value.trim();
+  const pid  = dom.squadPlayerFromDB.value;
 
-  if (!tIdx || isNaN(num) || !name) {
-    showToast('Preenche o número e o nome do jogador.', 'error');
+  if (!tIdx) { showToast('Seleciona uma equipa.', 'error'); return; }
+  if (isNaN(num) || num < 1) { showToast('Preenche o número da camisola.', 'error'); return; }
+  if (!pid) { showToast('Escolhe um jogador da lista.', 'error'); return; }
+
+  const player = state.players.find((p) => p.id === pid);
+  if (!player) { showToast('Jogador não encontrado.', 'error'); return; }
+
+  // Check if already in squad
+  if (state.squads[tIdx].some((p) => p.id === pid)) {
+    showToast('Este jogador já está no plantel.', 'error');
     return;
   }
 
-  state.squads[tIdx].push({
-    id: `p_${Math.random().toString(36).substring(2, 9)}`,
-    num,
-    name,
-  });
-
+  state.squads[tIdx].push({ id: player.id, num, name: player.nome });
   persistConfigTeams();
   dom.squadPlayerNum.value = '';
-  dom.squadPlayerName.value = '';
-  dom.squadPlayerNum.focus();
+  dom.squadPlayerFromDB.value = '';
   renderSquadList();
-  showToast('Jogador adicionado!', 'ok');
+  renderSquadPlayerFromDBDropdown();
+  showToast('Jogador adicionado ao plantel!', 'ok');
 }
 
 export function onSquadListClick(e) {
@@ -454,6 +457,81 @@ export function onGerarEliminatorias() {
 }
 
 // ---------------------------------------------------------------------------
+// Handlers — Jogo Singular
+// ---------------------------------------------------------------------------
+export function onFazerDraft() {
+  const nomeA = (dom.draftNomeA.value.trim()) || 'Equipa A';
+  const nomeB = (dom.draftNomeB.value.trim()) || 'Equipa B';
+
+  const checkedBoxes = dom.draftPlayerList.querySelectorAll('.draft-checkbox:checked');
+  const selectedIds = Array.from(checkedBoxes).map((cb) => cb.dataset.pid);
+
+  if (selectedIds.length < 2) {
+    showToast('Seleciona pelo menos 2 jogadores.', 'error');
+    return;
+  }
+
+  const players = selectedIds.map((id) => state.players.find((p) => p.id === id)).filter(Boolean);
+  const { equipaA, equipaB } = snakeDraft(players);
+
+  // Store in module-level variable (imported as currentDraft)
+  currentDraft.equipaA = equipaA;
+  currentDraft.equipaB = equipaB;
+  currentDraft.scorersA = [];
+  currentDraft.scorersB = [];
+
+  renderDraftTeams(nomeA, nomeB, equipaA, equipaB);
+}
+
+export async function onGuardarJogo() {
+  const nomeA = dom.draftLabelA ? dom.draftLabelA.textContent : 'Equipa A';
+  const nomeB = dom.draftLabelB ? dom.draftLabelB.textContent : 'Equipa B';
+  const scoreA = dom.draftScoreA ? dom.draftScoreA.value.trim() : '';
+  const scoreB = dom.draftScoreB ? dom.draftScoreB.value.trim() : '';
+
+  if (!currentDraft.equipaA.length && !currentDraft.equipaB.length) {
+    showToast('Faz o draft primeiro.', 'error');
+    return;
+  }
+
+  const resultado = (scoreA !== '' && scoreB !== '') ? `${parseInt(scoreA, 10)}-${parseInt(scoreB, 10)}` : null;
+
+  const jogo = {
+    id: crypto.randomUUID(),
+    data: new Date().toISOString(),
+    nomeEquipaA: nomeA,
+    nomeEquipaB: nomeB,
+    equipaA: currentDraft.equipaA.map((p) => p.id),
+    equipaB: currentDraft.equipaB.map((p) => p.id),
+    scorersA: [...(currentDraft.scorersA || [])],
+    scorersB: [...(currentDraft.scorersB || [])],
+    resultado,
+  };
+
+  state.jogosSingulares.push(jogo);
+  await persistJogosSingulares();
+  renderSingularHistorico();
+
+  // Reset
+  currentDraft.equipaA = [];
+  currentDraft.equipaB = [];
+  currentDraft.scorersA = [];
+  currentDraft.scorersB = [];
+  if (dom.draftResultCard) dom.draftResultCard.style.display = 'none';
+  if (dom.draftScoreA) dom.draftScoreA.value = '';
+  if (dom.draftScoreB) dom.draftScoreB.value = '';
+  dom.draftPlayerList.querySelectorAll('.draft-checkbox:checked').forEach((cb) => { cb.checked = false; });
+  const countEl = document.getElementById('draftSelectedCount');
+  if (countEl) countEl.textContent = '0 jogadores selecionados';
+  if (dom.btnFazerDraft) dom.btnFazerDraft.disabled = true;
+
+  showToast('Jogo guardado no histórico!', 'ok');
+
+  // Switch to history tab
+  document.querySelectorAll('.singular-subtab').forEach((b) => b.classList.toggle('active', b.dataset.subtab === 'historico'));
+  document.querySelectorAll('.singular-panel').forEach((p) => p.classList.toggle('active', p.id === 'singular-historico'));
+}
+// ---------------------------------------------------------------------------
 // Binding de eventos e inicialização
 // ---------------------------------------------------------------------------
 export function bindEvents() {
@@ -465,7 +543,20 @@ export function bindEvents() {
   }
 
   Array.from(document.querySelectorAll('.tab')).forEach((btn) => {
-    btn.addEventListener('click', () => { switchTab(btn.dataset.tab); });
+    btn.addEventListener('click', (e) => {
+      if (btn.dataset.tab) {
+        switchTab(btn.dataset.tab);
+      } else if (btn.classList.contains('dropdown-btn')) {
+        const dropdown = btn.closest('.dropdown');
+        if (dropdown) dropdown.classList.toggle('open');
+      }
+    });
+  });
+
+  document.addEventListener('click', (e) => {
+    if (!e.target.closest('.dropdown')) {
+      document.querySelectorAll('.dropdown.open').forEach(d => d.classList.remove('open'));
+    }
   });
 
   dom.btnGerarCalendario.addEventListener('click', onGerarCalendario);
@@ -487,9 +578,12 @@ export function bindEvents() {
     updateThemeIcon();
   });
 
-  // Plantéis
-  dom.squadTeamSelect.addEventListener('change', renderSquadList);
-  dom.btnAddPlayer.addEventListener('click', onAddPlayer);
+  // Plantéis — agora com dropdown da BD
+  dom.squadTeamSelect.addEventListener('change', () => {
+    renderSquadList();
+    renderSquadPlayerFromDBDropdown();
+  });
+  dom.btnAddPlayerFromDB.addEventListener('click', onAddPlayerFromDB);
   dom.squadList.addEventListener('click', onSquadListClick);
 
   // Exportar / Importar
@@ -519,6 +613,25 @@ export function bindEvents() {
   });
   dom.modalOverlay.addEventListener('click', (e) => { if (e.target === dom.modalOverlay) closeConfirm(); });
   document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && !dom.modalOverlay.hidden) closeConfirm(); });
+
+  // Jogadores BD
+  if (dom.btnNewPlayer) dom.btnNewPlayer.addEventListener('click', () => openPlayerModal(null));
+  if (dom.playerSearchInput) {
+    dom.playerSearchInput.addEventListener('input', renderPlayersList);
+  }
+
+  // Jogo Singular — subtabs
+  document.querySelectorAll('.singular-subtab').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      document.querySelectorAll('.singular-subtab').forEach((b) => b.classList.toggle('active', b === btn));
+      document.querySelectorAll('.singular-panel').forEach((p) => p.classList.toggle('active', p.id === `singular-${btn.dataset.subtab}`));
+      if (btn.dataset.subtab === 'historico') renderSingularHistorico();
+    });
+  });
+
+  // Jogo Singular — Draft
+  if (dom.btnFazerDraft) dom.btnFazerDraft.addEventListener('click', onFazerDraft);
+  if (dom.btnGuardarJogo) dom.btnGuardarJogo.addEventListener('click', onGuardarJogo);
 }
 
 export async function init() {

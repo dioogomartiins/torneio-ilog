@@ -245,3 +245,59 @@ export function resolveHeadToHead(cluster, schedule, results, config) {
     return a.name.localeCompare(b.name);
   });
 }
+
+// ---------------------------------------------------------------------------
+// Avaliação e Snake Draft — Jogo Singular
+// ---------------------------------------------------------------------------
+
+/**
+ * Calcula o rating global de um jogador (média dos 6 atributos, 0–5).
+ * @param {object} player - Jogador da base de dados global
+ * @returns {number} rating arredondado a 1 casa decimal
+ */
+export function getPlayerRating(player) {
+  if (!player || !player.atributos) return 0;
+  const a = player.atributos;
+  const vals = [a.velocidade, a.finalizacao, a.passe, a.drible, a.defesa, a.fisico];
+  const sum = vals.reduce((s, v) => s + (Number(v) || 0), 0);
+  return Math.round((sum / 6) * 10) / 10;
+}
+
+/**
+ * Calcula o rating total de uma equipa (soma dos ratings individuais).
+ * @param {object[]} players
+ * @returns {number}
+ */
+export function getTeamTotalRating(players) {
+  return Math.round(players.reduce((s, p) => s + getPlayerRating(p), 0) * 10) / 10;
+}
+
+/**
+ * Divide os jogadores em 2 equipas pelo método Snake Draft.
+ *
+ * Ordena por rating decrescente e aplica o padrão:
+ *   Pick 1 → A, Pick 2 → B, Pick 3 → B, Pick 4 → A, Pick 5 → A, ...
+ * (A, BB, AA, BB, AA, ...)
+ *
+ * @param {object[]} players - Lista de jogadores selecionados
+ * @returns {{ equipaA: object[], equipaB: object[] }}
+ */
+export function snakeDraft(players) {
+  const sorted = players.slice().sort((a, b) => getPlayerRating(b) - getPlayerRating(a));
+  const equipaA = [];
+  const equipaB = [];
+
+  // Padrão de picks: A=0, B=1, B=1, A=0, A=0, B=1, B=1, ...
+  // pick index 0→A, 1→B, 2→B, 3→A, 4→A, 5→B, 6→B, ...
+  sorted.forEach((player, i) => {
+    const cycle = Math.floor(i / 2) % 2; // 0 ou 1, alterna a cada 2 picks
+    const pickA = (i === 0) || (i % 2 === 0 && cycle === 0) || (i % 2 !== 0 && cycle === 1);
+    if (pickA) {
+      equipaA.push(player);
+    } else {
+      equipaB.push(player);
+    }
+  });
+
+  return { equipaA, equipaB };
+}

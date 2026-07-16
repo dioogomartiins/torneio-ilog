@@ -314,10 +314,10 @@
     /* ---------- Tabs ---------- */
     .tabs {
       display: flex;
+      flex-wrap: wrap;
       gap: 4px;
       padding: 10px 20px 0;
       background: var(--card);
-      overflow-x: auto;
       border-bottom: 1px solid var(--line);
       transition: background-color 0.3s;
     }
@@ -349,6 +349,51 @@
 
     [data-theme="dark"] .tab:hover:not(.active) {
       color: var(--ink);
+    }
+
+    /* ---------- Tabs Dropdown ---------- */
+    .dropdown {
+      position: relative;
+      display: inline-block;
+    }
+
+    .dropdown-content {
+      display: none;
+      position: absolute;
+      top: 100%;
+      left: 0;
+      background-color: var(--card);
+      min-width: 160px;
+      box-shadow: var(--shadow-sm);
+      border: 1px solid var(--line);
+      border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+      z-index: 100;
+      flex-direction: column;
+      padding: 4px 0;
+    }
+
+    .dropdown:hover .dropdown-content,
+    .dropdown:focus-within .dropdown-content,
+    .dropdown.open .dropdown-content {
+      display: flex;
+    }
+
+    .dropdown-content .tab {
+      width: 100%;
+      text-align: left;
+      border: none !important;
+      border-bottom: 1px solid var(--line) !important;
+      padding: 10px 16px;
+      border-radius: 0;
+      margin: 0;
+    }
+
+    .dropdown-content .tab:last-child {
+      border-bottom: none !important;
+    }
+
+    .dropdown-content .tab:hover {
+      background-color: var(--paper);
     }
 
     /* ---------- Content ---------- */
@@ -1059,6 +1104,10 @@
       background: var(--pitch-600);
     }
 
+    .dropdown.open .dropdown-content {
+      display: block;
+    }
+
     .foot {
       padding: 22px 20px 10px;
       text-align: center;
@@ -1108,6 +1157,28 @@
       .tabs.menu-open {
         display: flex;
         animation: fadein 0.2s ease;
+      }
+
+      /* Dropdown adjustments for mobile */
+      .dropdown-content {
+        position: static;
+        display: none;
+        box-shadow: none;
+        border: none;
+        background: transparent;
+        padding-left: 20px;
+        padding-top: 0;
+        padding-bottom: 0;
+      }
+      
+      .dropdown-btn {
+        pointer-events: auto;
+        color: var(--gold-dark);
+        opacity: 0.8;
+      }
+      
+      .dropdown-content .tab {
+        border-bottom: none !important;
       }
 
       .tab {
@@ -1172,3 +1243,401 @@
         transition: none !important;
       }
     }
+
+    /* =====================================================================
+       JOGADORES — Base de Dados
+       ===================================================================== */
+
+    .player-db-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+      gap: 14px;
+    }
+
+    .player-db-card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      box-shadow: var(--shadow-sm);
+      transition: box-shadow .2s, transform .2s;
+    }
+
+    .player-db-card:hover {
+      box-shadow: var(--shadow-md);
+      transform: translateY(-2px);
+    }
+
+    .player-db-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .player-avatar {
+      width: 44px;
+      height: 44px;
+      border-radius: 50%;
+      background: var(--pitch-600);
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      flex-shrink: 0;
+    }
+
+    .player-db-name {
+      font-weight: 700;
+      font-size: 15px;
+      color: var(--ink);
+      line-height: 1.3;
+    }
+
+    .player-db-team {
+      font-size: 12px;
+      color: var(--ink-faint);
+      margin-top: 2px;
+    }
+
+    .player-db-rating {
+      font-family: var(--font-display);
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--gold-dark);
+      margin-left: auto;
+      flex-shrink: 0;
+    }
+
+    .player-attrs-mini {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 6px;
+    }
+
+    .player-attr-item {
+      background: var(--paper);
+      border-radius: var(--radius-sm);
+      padding: 4px 6px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+    }
+
+    .player-attr-label {
+      font-size: 9px;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+      color: var(--ink-faint);
+    }
+
+    .player-attr-val {
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--pitch-600);
+    }
+
+    .player-db-actions {
+      display: flex;
+      gap: 6px;
+      justify-content: flex-end;
+      margin-top: 4px;
+    }
+
+    /* Stars widget */
+    .star-row {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 6px 0;
+    }
+
+    .star-row-label {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      width: 90px;
+      flex-shrink: 0;
+    }
+
+    .stars-input {
+      display: flex;
+      gap: 4px;
+    }
+
+    .star-btn {
+      background: none;
+      border: none;
+      padding: 0;
+      font-size: 20px;
+      cursor: pointer;
+      color: var(--silver);
+      line-height: 1;
+      transition: color .15s, transform .15s;
+    }
+
+    .star-btn.filled {
+      color: var(--gold);
+    }
+
+    .star-btn:hover {
+      transform: scale(1.2);
+      color: var(--gold);
+    }
+
+    .rating-preview {
+      font-family: var(--font-display);
+      font-size: 22px;
+      font-weight: 700;
+      color: var(--gold-dark);
+      text-align: center;
+      margin: 12px 0 4px;
+    }
+
+    .rating-preview-label {
+      font-size: 12px;
+      color: var(--ink-faint);
+      text-align: center;
+      margin-bottom: 16px;
+    }
+
+    /* =====================================================================
+       JOGO SINGULAR
+       ===================================================================== */
+
+    .singular-subtabs {
+      display: flex;
+      gap: 4px;
+      margin-bottom: 16px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 4px;
+    }
+
+    .singular-subtab {
+      flex: 1;
+      background: none;
+      border: none;
+      padding: 8px 12px;
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      transition: background .15s, color .15s;
+    }
+
+    .singular-subtab.active {
+      background: var(--pitch-600);
+      color: #fff;
+    }
+
+    .singular-panel {
+      display: none;
+    }
+
+    .singular-panel.active {
+      display: block;
+    }
+
+    .draft-player-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      padding: 10px 12px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--line);
+      background: var(--card);
+      margin-bottom: 6px;
+      transition: background .15s;
+      cursor: pointer;
+    }
+
+    .draft-player-row:hover {
+      background: var(--paper);
+    }
+
+    .draft-player-row input[type="checkbox"] {
+      width: 18px;
+      height: 18px;
+      cursor: pointer;
+      accent-color: var(--pitch-600);
+    }
+
+    .draft-player-nome {
+      font-weight: 600;
+      font-size: 14px;
+      flex: 1;
+    }
+
+    .draft-player-team-badge {
+      font-size: 11px;
+      padding: 2px 7px;
+      border-radius: 999px;
+      background: var(--pitch-700);
+      color: #fff;
+      font-weight: 600;
+    }
+
+    .draft-player-rating {
+      font-family: var(--font-display);
+      font-size: 14px;
+      font-weight: 700;
+      color: var(--gold-dark);
+    }
+
+    .draft-selected-count {
+      font-size: 13px;
+      color: var(--ink-faint);
+      margin-bottom: 12px;
+    }
+
+    .draft-teams-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 16px;
+    }
+
+    @media (max-width: 600px) {
+      .draft-teams-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .draft-team-card {
+      background: var(--paper);
+      border: 2px solid var(--line);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+
+    .draft-team-card.team-a {
+      border-color: var(--pitch-600);
+    }
+
+    .draft-team-card.team-b {
+      border-color: var(--gold);
+    }
+
+    .draft-team-name {
+      font-family: var(--font-display);
+      font-size: 18px;
+      font-weight: 700;
+      margin-bottom: 4px;
+    }
+
+    .draft-team-rating-total {
+      font-size: 12px;
+      color: var(--ink-faint);
+      margin-bottom: 12px;
+    }
+
+    .draft-team-player-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 0;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .draft-team-player-row:last-child {
+      border-bottom: none;
+    }
+
+    .draft-pick-num {
+      font-family: var(--font-display);
+      font-size: 11px;
+      font-weight: 700;
+      color: var(--ink-faint);
+      width: 20px;
+      flex-shrink: 0;
+    }
+
+    .draft-balance-bar {
+      margin: 16px 0;
+      padding: 12px 16px;
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      text-align: center;
+      font-size: 13px;
+      color: var(--ink-soft);
+      grid-column: 1 / -1;
+    }
+
+    .draft-balance-diff {
+      font-weight: 700;
+      color: var(--pitch-600);
+    }
+
+    /* =====================================================================
+       HISTÓRICO de Jogos Singulares
+       ===================================================================== */
+
+    .historico-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 16px;
+      margin-bottom: 12px;
+    }
+
+    .historico-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .historico-date {
+      font-size: 12px;
+      color: var(--ink-faint);
+      font-weight: 600;
+    }
+
+    .historico-resultado {
+      font-family: var(--font-display);
+      font-size: 24px;
+      font-weight: 700;
+      color: var(--pitch-800);
+      text-align: center;
+      margin: 10px 0;
+    }
+
+    .historico-teams {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .historico-team-name {
+      font-weight: 700;
+      font-size: 14px;
+    }
+
+    .historico-team-players {
+      font-size: 12px;
+      color: var(--ink-faint);
+      margin-top: 4px;
+    }
+
+    [data-theme="dark"] .player-db-card {
+      background: var(--card);
+    }
+
+    [data-theme="dark"] .draft-player-row {
+      background: var(--card);
+    }
+
+    [data-theme="dark"] .draft-player-row:hover {
+      background: var(--pitch-900);
+    }

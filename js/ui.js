@@ -1,6 +1,6 @@
 import { state } from './state.js';
 import { getTeamName, getTeamDisplay, escapeHtml, fmtTimestamp, clamp } from './utils.js';
-import { computeStandings, GAME_STATUS } from './algorithms.js';
+import { computeStandings, GAME_STATUS, getPlayerRating, getTeamTotalRating } from './algorithms.js';
 import { onStatusBtnClick, onScoreBtnClick, onResultCommit, onTeamPropChange, onSquadListClick } from './main.js';
 
 // ---------------------------------------------------------------------------
@@ -23,9 +23,13 @@ export function cacheDom() {
     'dashboardPodium', 'dashboardStandings', 'dashboardStats', 'dashboardScorers',
     'cfgNome', 'cfgNumEquipas', 'cfgNumGrupos', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
     'cfgMataMata', 'cfgNumPlayoffTeams',
-    'teamsList', 'squadTeamSelect', 'squadPlayerNum', 'squadPlayerName', 'btnAddPlayer', 'squadList',
+    'teamsList', 'squadTeamSelect', 'squadPlayerNum', 'squadPlayerFromDB', 'btnAddPlayerFromDB', 'squadList',
     'calendarList', 'resultsList', 'standingsWrapper', 'statsGrid',
     'modalOverlay', 'modalTitle', 'modalBody', 'modalCancel', 'modalConfirm', 'toastRoot',
+    'btnNewPlayer', 'playerSearchInput', 'playersList',
+    'draftNomeA', 'draftNomeB', 'draftPlayerList', 'btnFazerDraft', 'draftResultCard', 'draftTeamsResult',
+    'draftLabelA', 'draftLabelB', 'draftScoreA', 'draftScoreB', 'btnGuardarJogo',
+    'singularHistoricoList',
   ].forEach((id) => { dom[id] = document.getElementById(id); });
 
   dom.panels = Array.from(document.querySelectorAll('.panel'));
@@ -41,6 +45,10 @@ export function renderAll() {
   renderCalendar();
   renderResults();
   refreshComputed();
+  renderPlayersList();
+  renderSquadPlayerFromDBDropdown();
+  renderDraftPlayerList();
+  renderSingularHistorico();
 }
 
 export function refreshComputed() {
@@ -163,21 +171,55 @@ export function renderSquadList() {
 
   const squad = state.squads[tIdx] || [];
   if (!squad.length) {
-    dom.squadList.innerHTML = '<p class="empty" style="padding-top:20px;">Sem jogadores. Adiciona o primeiro acima!</p>';
+    dom.squadList.innerHTML = '<p class="empty" style="padding-top:20px;">Sem jogadores. Adiciona usando o dropdown acima!</p>';
     return;
   }
 
   const sortedSquad = squad.slice().sort((a, b) => a.num - b.num);
-  const html = sortedSquad.map((p) =>
-    `<div class="player-row">` +
-    `<div class="player-info"><span class="player-num">${p.num}</span><span style="font-weight:600;">${escapeHtml(p.name)}</span></div>` +
-    `<div style="display:flex; gap:6px;">` +
-    `<button class="btn btn-ghost player-stats-btn" data-idx="${tIdx}" data-pid="${p.id}" style="color:var(--pitch-800); background:var(--paper); border:1px solid var(--line); padding:4px 8px; font-size:12px;">📊 Ficha</button>` +
-    `<button class="player-del" data-idx="${tIdx}" data-pid="${p.id}" title="Remover jogador">×</button>` +
-    `</div></div>`
-  ).join('');
+  const html = sortedSquad.map((p) => {
+    // Procura o jogador na BD global para mostrar o rating
+    const dbPlayer = state.players.find((pl) => pl.id === p.id);
+    const ratingStr = dbPlayer ? ` <span style="font-size:12px; color:var(--gold-dark); font-weight:700;">&#9733; ${getPlayerRating(dbPlayer).toFixed(1)}</span>` : '';
+    return (
+      `<div class="player-row">` +
+      `<div class="player-info"><span class="player-num">${p.num}</span><span style="font-weight:600;">${escapeHtml(p.name)}</span>${ratingStr}</div>` +
+      `<div style="display:flex; gap:6px;">` +
+      `<button class="btn btn-ghost player-stats-btn" data-idx="${tIdx}" data-pid="${p.id}" style="color:var(--pitch-800); background:var(--paper); border:1px solid var(--line); padding:4px 8px; font-size:12px;">📊 Ficha</button>` +
+      `<button class="player-del" data-idx="${tIdx}" data-pid="${p.id}" title="Remover jogador">&times;</button>` +
+      `</div></div>`
+    );
+  }).join('');
 
-  dom.squadList.innerHTML = `<div style="margin-top:20px;">${html}</div>`;
+  const squadPlayersObj = squad.map(p => state.players.find(pl => pl.id === p.id)).filter(Boolean);
+  const totalRating = getTeamTotalRating(squadPlayersObj);
+  const media = squadPlayersObj.length > 0 ? (totalRating / squadPlayersObj.length) : 0;
+
+  const ratingHeaderHtml = 
+    `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom:12px; padding:8px 12px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm);">` +
+    `<span style="font-size:13px; font-weight:700; color:var(--ink-soft); text-transform:uppercase;">Jogadores (${squad.length})</span>` +
+    `<span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--gold-dark);" title="Rating Médio (calculado a partir da Base de Dados)">Média ★ ${media.toFixed(1)}</span>` +
+    `</div>`;
+
+  dom.squadList.innerHTML = ratingHeaderHtml + `<div>${html}</div>`;
+}
+
+/**
+ * Populates the squad player-from-DB dropdown with all players not yet in this squad.
+ */
+export function renderSquadPlayerFromDBDropdown() {
+  if (!dom.squadPlayerFromDB) return;
+  const tIdx = dom.squadTeamSelect ? dom.squadTeamSelect.value : null;
+  const currentSquad = tIdx ? (state.squads[tIdx] || []) : [];
+  const currentIds = new Set(currentSquad.map((p) => p.id));
+
+  const opts = ['<option value="">-- Escolher jogador --</option>'];
+  const sorted = state.players.slice().sort((a, b) => a.nome.localeCompare(b.nome));
+  sorted.forEach((pl) => {
+    if (!currentIds.has(pl.id)) {
+      opts.push(`<option value="${escapeHtml(pl.id)}">${escapeHtml(pl.nome)} (★ ${getPlayerRating(pl).toFixed(1)})</option>`);
+    }
+  });
+  dom.squadPlayerFromDB.innerHTML = opts.join('');
 }
 
 // ---------------------------------------------------------------------------
@@ -391,6 +433,10 @@ export function renderStandingsWrapper(groupsData) {
  */
 function buildPlayerIndex() {
   const index = {};
+  state.players.forEach((p) => {
+    const tName = p.teamIdx !== null && p.teamIdx !== undefined ? getTeamName(p.teamIdx) : 'Sem Equipa';
+    index[p.id] = { name: p.nome, team: tName };
+  });
   state.squads.forEach((squad, teamIndex) => {
     squad.forEach((player) => {
       index[player.id] = { name: player.name, team: getTeamName(teamIndex) };
@@ -403,21 +449,28 @@ export function computeScorerStats() {
   const playerIndex = buildPlayerIndex();
   const stats = {};
 
+  function addGoal(pId) {
+    if (pId === 'auto') return;
+    if (!stats[pId]) {
+      const info = playerIndex[pId] || { name: 'Jogador Desconhecido', team: 'Sem Equipa' };
+      stats[pId] = { name: info.name, team: info.team, count: 0 };
+    }
+    stats[pId].count++;
+  }
+
   Object.keys(state.results).forEach((gi) => {
     const res = state.results[gi];
     if (!res || typeof res !== 'object' || !res.scorers) return;
 
     ['home', 'away'].forEach((side) => {
       if (!res.scorers[side]) return;
-      res.scorers[side].forEach((pId) => {
-        if (pId === 'auto') return;
-        if (!stats[pId]) {
-          const info = playerIndex[pId] || { name: 'Jogador Desconhecido', team: 'Sem Equipa' };
-          stats[pId] = { name: info.name, team: info.team, count: 0 };
-        }
-        stats[pId].count++;
-      });
+      res.scorers[side].forEach(addGoal);
     });
+  });
+
+  state.jogosSingulares.forEach((jogo) => {
+    if (jogo.scorersA) jogo.scorersA.forEach(addGoal);
+    if (jogo.scorersB) jogo.scorersB.forEach(addGoal);
   });
 
   return Object.values(stats).sort((a, b) => b.count - a.count);
@@ -605,6 +658,7 @@ export function openConfirm(title, body, onConfirm) {
   dom.modalConfirm.style.background = 'var(--danger)';
   dom.modalConfirm.style.color = '#fff';
   dom.modalConfirm.hidden = false;
+  dom.modalConfirm.style.display = '';
 
   dom.modalOverlay.hidden = false;
   dom.modalConfirm.focus();
@@ -638,6 +692,7 @@ export function openScorerModal(gi, side, onSelect) {
   dom.modalConfirm.style.background = 'var(--pitch-500)';
   dom.modalConfirm.style.color = '#fff';
   dom.modalConfirm.hidden = false;
+  dom.modalConfirm.style.display = '';
 
   confirmCallback = () => {
     onSelect('auto');
@@ -654,15 +709,57 @@ export function openScorerModal(gi, side, onSelect) {
   });
 }
 
-export function openPlayerProfile(pId, tIdx) {
-  const squad = state.squads[tIdx] || [];
-  const player = squad.find((p) => p.id === pId);
+export function openPlayerProfile(pId, tIdx = null) {
+  const dbPlayer = state.players.find((p) => p.id === pId);
+  let player = dbPlayer ? { id: dbPlayer.id, name: dbPlayer.nome, num: '?' } : null;
+  let teamName = dbPlayer && dbPlayer.teamIdx !== null && dbPlayer.teamIdx !== undefined ? getTeamName(dbPlayer.teamIdx) : 'Sem equipa';
+
+  if (!player && tIdx !== null) {
+    const sqPlayer = (state.squads[tIdx] || []).find((p) => p.id === pId);
+    if (sqPlayer) {
+      player = sqPlayer;
+      teamName = getTeamName(tIdx);
+    }
+  }
+
+  if (tIdx !== null && dbPlayer) {
+    const sqPlayer = (state.squads[tIdx] || []).find((p) => p.id === pId);
+    if (sqPlayer) { player.num = sqPlayer.num; teamName = getTeamName(tIdx); }
+  }
+
   if (!player) return;
 
-  const teamName = getTeamName(tIdx);
+  let attrsHtml = '';
+  if (dbPlayer) {
+    const rating = getPlayerRating(dbPlayer);
+    const ATTR_LABELS = { velocidade: 'Velocidade', finalizacao: 'Finalização', passe: 'Passe', drible: 'Drible', defesa: 'Defesa', fisico: 'Físico' };
+    const attrs = Object.entries(ATTR_LABELS).map(([key, label]) =>
+      `<div class="player-attr-item">` +
+      `<span class="player-attr-label">${label.substring(0, 3)}</span>` +
+      `<span class="player-attr-val">${dbPlayer.atributos[key] || 0}</span>` +
+      `</div>`
+    ).join('');
+    attrsHtml =
+      `<div style="margin-top: 20px; padding: 12px; background: var(--paper); border: 1px solid var(--line); border-radius: var(--radius-sm);">` +
+      `<div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:8px;">` +
+      `<div style="font-size:12px; font-weight:700; color:var(--ink-soft); text-transform:uppercase;">Atributos Base</div>` +
+      `<div style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--gold-dark);">★ ${rating.toFixed(1)}</div>` +
+      `</div>` +
+      `<div class="player-attrs-mini">${attrs}</div>` +
+      `</div>`;
+  }
+
   let goals = 0;
   let gamesWithGoals = 0;
   let bestGameGolos = 0;
+
+  function countGoals(matchGoals) {
+    if (matchGoals > 0) {
+      goals += matchGoals;
+      gamesWithGoals++;
+      if (matchGoals > bestGameGolos) bestGameGolos = matchGoals;
+    }
+  }
 
   Object.keys(state.results).forEach((gi) => {
     const res = state.results[gi];
@@ -673,11 +770,14 @@ export function openPlayerProfile(pId, tIdx) {
         res.scorers[side].forEach((id) => { if (id === pId) matchGoals++; });
       }
     });
-    if (matchGoals > 0) {
-      goals += matchGoals;
-      gamesWithGoals++;
-      if (matchGoals > bestGameGolos) bestGameGolos = matchGoals;
-    }
+    countGoals(matchGoals);
+  });
+
+  state.jogosSingulares.forEach((jogo) => {
+    let matchGoals = 0;
+    if (jogo.scorersA) jogo.scorersA.forEach((id) => { if (id === pId) matchGoals++; });
+    if (jogo.scorersB) jogo.scorersB.forEach((id) => { if (id === pId) matchGoals++; });
+    countGoals(matchGoals);
   });
 
   dom.modalTitle.textContent = 'Ficha de Jogador';
@@ -687,6 +787,7 @@ export function openPlayerProfile(pId, tIdx) {
     `<h2 style="font-size:24px; margin-bottom:4px;">${escapeHtml(player.name)}</h2>` +
     `<div style="color:var(--ink-faint); font-weight:600;">Camisola ${player.num} • ${escapeHtml(teamName)}</div>` +
     `</div>` +
+    attrsHtml +
     `<div class="stats-grid" style="margin-top:20px; grid-template-columns: 1fr 1fr;">` +
     `<div class="stat-card" style="text-align:center;"><div class="stat-label">Total de Golos</div><div class="stat-value">${goals}</div></div>` +
     `<div class="stat-card" style="text-align:center;"><div class="stat-label">Jogos a Marcar</div><div class="stat-value">${gamesWithGoals}</div></div>` +
@@ -698,6 +799,7 @@ export function openPlayerProfile(pId, tIdx) {
   dom.modalCancel.style.color = 'var(--ink)';
   dom.modalCancel.hidden = false;
   dom.modalConfirm.hidden = true;
+  dom.modalConfirm.style.display = 'none';
 
   dom.modalOverlay.hidden = false;
   confirmCallback = null;
@@ -749,4 +851,397 @@ export function switchTab(name) {
   });
   dom.panels.forEach((p) => { p.classList.toggle('active', p.id === `tab-${name}`); });
   if (tabsContainer) tabsContainer.classList.remove('menu-open');
+}
+
+// ---------------------------------------------------------------------------
+// Render — Jogadores (Base de Dados)
+// ---------------------------------------------------------------------------
+
+const ATTR_LABELS = {
+  velocidade: 'Velocidade',
+  finalizacao: 'Finalização',
+  passe: 'Passe',
+  drible: 'Drible',
+  defesa: 'Defesa',
+  fisico: 'Físico',
+};
+
+function playerInitials(nome) {
+  return (nome || '?').split(' ').slice(0, 2).map((w) => w[0]).join('').toUpperCase();
+}
+
+export function renderPlayersList() {
+  if (!dom.playersList) return;
+
+  const search = (dom.playerSearchInput ? dom.playerSearchInput.value.toLowerCase() : '');
+  const players = state.players.filter((p) => !search || p.nome.toLowerCase().includes(search));
+
+  if (!players.length) {
+    dom.playersList.innerHTML = `<p class="empty">${search ? 'Nenhum jogador encontrado.' : 'Ainda não há jogadores. Clica em "+ Novo Jogador" para começar!'}</p>`;
+    return;
+  }
+
+  const sorted = players.slice().sort((a, b) => a.nome.localeCompare(b.nome));
+  const cards = sorted.map((p) => {
+    const rating = getPlayerRating(p);
+    const teamName = p.teamIdx !== null && p.teamIdx !== undefined ? getTeamName(p.teamIdx) : 'Sem equipa';
+    const attrs = Object.entries(ATTR_LABELS).map(([key, label]) =>
+      `<div class="player-attr-item">` +
+      `<span class="player-attr-label">${label.substring(0, 3)}</span>` +
+      `<span class="player-attr-val">${p.atributos[key] || 0}</span>` +
+      `</div>`
+    ).join('');
+
+    return (
+      `<div class="player-db-card">` +
+      `<div class="player-db-header">` +
+      `<div class="player-avatar">${escapeHtml(playerInitials(p.nome))}</div>` +
+      `<div>` +
+      `<div class="player-db-name">${escapeHtml(p.nome)}</div>` +
+      `<div class="player-db-team">${escapeHtml(teamName)}</div>` +
+      `</div>` +
+      `<div class="player-db-rating">★ ${rating.toFixed(1)}</div>` +
+      `</div>` +
+      `<div class="player-attrs-mini">${attrs}</div>` +
+      `<div class="player-db-actions">` +
+      `<button class="btn btn-ghost" style="font-size:12px; padding:4px 10px; border:1px solid var(--line);" data-action="view-profile" data-pid="${escapeHtml(p.id)}">📊 Ficha</button>` +
+      `<button class="btn btn-ghost" style="font-size:12px; padding:4px 10px; border:1px solid var(--line);" data-action="edit-player" data-pid="${escapeHtml(p.id)}">✏️ Editar</button>` +
+      `<button class="btn btn-ghost" style="font-size:12px; padding:4px 10px; border:1px solid var(--danger); color:var(--danger);" data-action="del-player" data-pid="${escapeHtml(p.id)}">🗑️</button>` +
+      `</div>` +
+      `</div>`
+    );
+  }).join('');
+
+  dom.playersList.innerHTML = `<div class="player-db-grid">${cards}</div>`;
+
+  dom.playersList.querySelectorAll('[data-action="view-profile"]').forEach((btn) => {
+    btn.addEventListener('click', () => openPlayerProfile(btn.dataset.pid));
+  });
+  dom.playersList.querySelectorAll('[data-action="edit-player"]').forEach((btn) => {
+    btn.addEventListener('click', () => openPlayerModal(btn.dataset.pid));
+  });
+  dom.playersList.querySelectorAll('[data-action="del-player"]').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const pid = btn.dataset.pid;
+      const pl = state.players.find((p) => p.id === pid);
+      openConfirm('Apagar Jogador', `Tens a certeza que queres apagar <strong>${escapeHtml(pl ? pl.nome : pid)}</strong>? Será removido de todos os plantéis.`, async () => {
+        const { persistPlayers, persistConfigTeams } = await import('./state.js');
+        state.players = state.players.filter((p) => p.id !== pid);
+        // Remove dos squads também
+        state.squads.forEach((squad, i) => {
+          state.squads[i] = squad.filter((p) => p.id !== pid);
+        });
+        await persistPlayers();
+        await persistConfigTeams();
+        renderPlayersList();
+        renderSquadList();
+        renderSquadPlayerFromDBDropdown();
+        renderDraftPlayerList();
+      });
+    });
+  });
+}
+
+/**
+ * Opens the player create/edit modal.
+ * @param {string|null} pid - Player ID to edit, or null to create new.
+ */
+export function openPlayerModal(pid = null) {
+  const existing = pid ? state.players.find((p) => p.id === pid) : null;
+  const title = existing ? 'Editar Jogador' : 'Novo Jogador';
+
+  // Build team options
+  const teamOpts = ['<option value="">Sem equipa</option>'];
+  for (let i = 0; i < state.scheduleTeamCount; i++) {
+    const sel = existing && existing.teamIdx === i ? 'selected' : '';
+    teamOpts.push(`<option value="${i}" ${sel}>${escapeHtml(getTeamName(i))}</option>`);
+  }
+
+  // Build attr rows
+  const currentAttrs = existing ? existing.atributos : { velocidade: 0, finalizacao: 0, passe: 0, drible: 0, defesa: 0, fisico: 0 };
+  const attrRows = Object.entries(ATTR_LABELS).map(([key, label]) => {
+    const val = currentAttrs[key] || 0;
+    const stars = [1, 2, 3, 4, 5].map((n) =>
+      `<button type="button" class="star-btn${n <= val ? ' filled' : ''}" data-attr="${key}" data-val="${n}">★</button>`
+    ).join('');
+    return (
+      `<div class="star-row">` +
+      `<span class="star-row-label">${label}</span>` +
+      `<div class="stars-input" data-attr="${key}">${stars}</div>` +
+      `</div>`
+    );
+  }).join('');
+
+  dom.modalTitle.textContent = title;
+  dom.modalBody.innerHTML =
+    `<div style="margin-bottom:12px;">` +
+    `<label style="display:block; font-weight:600; margin-bottom:6px; font-size:13px;">Nome</label>` +
+    `<input type="text" id="playerModalNome" class="input" value="${escapeHtml(existing ? existing.nome : '')}" placeholder="Ex: João Silva" maxlength="60" style="width:100%;">` +
+    `</div>` +
+    `<div style="margin-bottom:16px;">` +
+    `<label style="display:block; font-weight:600; margin-bottom:6px; font-size:13px;">Equipa</label>` +
+    `<select id="playerModalTeam" class="input" style="width:100%;">${teamOpts.join('')}</select>` +
+    `</div>` +
+    `<div id="playerModalRatingPreview" class="rating-preview">★ 0.0</div>` +
+    `<div class="rating-preview-label">Rating Global</div>` +
+    `${attrRows}`;
+
+  // Live star interaction
+  const currentVals = { ...currentAttrs };
+
+  function updateRatingPreview() {
+    const avg = Object.values(currentVals).reduce((s, v) => s + v, 0) / 6;
+    const el = document.getElementById('playerModalRatingPreview');
+    if (el) el.textContent = `★ ${avg.toFixed(1)}`;
+  }
+
+  updateRatingPreview();
+
+  dom.modalBody.querySelectorAll('.star-btn').forEach((btn) => {
+    btn.addEventListener('click', () => {
+      const attr = btn.dataset.attr;
+      const val = parseInt(btn.dataset.val, 10);
+      // Toggle: click same star = set to 0
+      currentVals[attr] = currentVals[attr] === val ? 0 : val;
+      // Re-render stars in this row
+      const row = dom.modalBody.querySelector(`.stars-input[data-attr="${attr}"]`);
+      row.querySelectorAll('.star-btn').forEach((s) => {
+        s.classList.toggle('filled', parseInt(s.dataset.val, 10) <= currentVals[attr]);
+      });
+      updateRatingPreview();
+    });
+  });
+
+  dom.modalCancel.innerHTML = 'Cancelar';
+  dom.modalCancel.style.background = 'var(--paper)';
+  dom.modalCancel.style.color = 'var(--ink)';
+  dom.modalCancel.hidden = false;
+
+  dom.modalConfirm.innerHTML = existing ? '💾 Guardar' : '✅ Criar Jogador';
+  dom.modalConfirm.style.background = 'var(--pitch-600)';
+  dom.modalConfirm.style.color = '#fff';
+  dom.modalConfirm.hidden = false;
+  dom.modalConfirm.style.display = '';
+
+  confirmCallback = async () => {
+    const nome = document.getElementById('playerModalNome').value.trim();
+    if (!nome) { showToast('O nome é obrigatório.', 'error'); return; }
+
+    const teamVal = document.getElementById('playerModalTeam').value;
+    const teamIdx = teamVal !== '' ? parseInt(teamVal, 10) : null;
+
+    const { normalizePlayer, persistPlayers } = await import('./state.js');
+
+    if (existing) {
+      const idx = state.players.findIndex((p) => p.id === existing.id);
+      if (idx !== -1) {
+        state.players[idx] = normalizePlayer({ ...existing, nome, teamIdx, atributos: { ...currentVals } });
+        // Update name in all squads
+        state.squads.forEach((squad) => {
+          const sp = squad.find((p) => p.id === existing.id);
+          if (sp) sp.name = nome;
+        });
+      }
+    } else {
+      const newPlayer = normalizePlayer({ id: crypto.randomUUID(), nome, teamIdx, atributos: { ...currentVals } });
+      state.players.push(newPlayer);
+    }
+
+    await persistPlayers();
+    renderPlayersList();
+    renderSquadPlayerFromDBDropdown();
+    renderDraftPlayerList();
+    dom.modalOverlay.hidden = true;
+    showToast(existing ? 'Jogador atualizado!' : 'Jogador criado!', 'ok');
+  };
+
+  dom.modalOverlay.hidden = false;
+  document.getElementById('playerModalNome').focus();
+}
+
+// ---------------------------------------------------------------------------
+// Render — Jogo Singular (Draft + Histórico)
+// ---------------------------------------------------------------------------
+
+// Stores current draft state (module-level, not persisted)
+export let currentDraft = { equipaA: [], equipaB: [] };
+
+export function renderDraftPlayerList() {
+  if (!dom.draftPlayerList) return;
+
+  if (!state.players.length) {
+    dom.draftPlayerList.innerHTML = '<p class="empty">Ainda não há jogadores na base de dados. Cria-os primeiro na aba 👤 Jogadores.</p>';
+    if (dom.btnFazerDraft) dom.btnFazerDraft.disabled = true;
+    return;
+  }
+
+  const sorted = state.players.slice().sort((a, b) => a.nome.localeCompare(b.nome));
+  const rows = sorted.map((p) => {
+    const rating = getPlayerRating(p);
+    const teamName = p.teamIdx !== null && p.teamIdx !== undefined ? getTeamName(p.teamIdx) : '';
+    const badge = teamName ? `<span class="draft-player-team-badge">${escapeHtml(teamName)}</span>` : '';
+    return (
+      `<label class="draft-player-row">` +
+      `<input type="checkbox" class="draft-checkbox" data-pid="${escapeHtml(p.id)}">` +
+      `<span class="draft-player-nome">${escapeHtml(p.nome)}</span>` +
+      `${badge}` +
+      `<span class="draft-player-rating">★ ${rating.toFixed(1)}</span>` +
+      `</label>`
+    );
+  }).join('');
+
+  dom.draftPlayerList.innerHTML =
+    `<p class="draft-selected-count" id="draftSelectedCount">0 jogadores selecionados</p>` +
+    rows;
+
+  // Update counter + enable button
+  dom.draftPlayerList.querySelectorAll('.draft-checkbox').forEach((cb) => {
+    cb.addEventListener('change', () => {
+      const count = dom.draftPlayerList.querySelectorAll('.draft-checkbox:checked').length;
+      const el = document.getElementById('draftSelectedCount');
+      if (el) el.textContent = `${count} jogador${count !== 1 ? 'es' : ''} selecionado${count !== 1 ? 's' : ''}`;
+      if (dom.btnFazerDraft) dom.btnFazerDraft.disabled = count < 2;
+    });
+  });
+
+  if (dom.btnFazerDraft) dom.btnFazerDraft.disabled = true;
+}
+
+export function renderDraftTeams(nomeA, nomeB, equipaA, equipaB) {
+  if (!dom.draftTeamsResult) return;
+
+  const ratingA = getTeamTotalRating(equipaA);
+  const ratingB = getTeamTotalRating(equipaB);
+  const diff = Math.abs(ratingA - ratingB).toFixed(1);
+
+  function teamCard(nome, players, cls) {
+    const isTeamA = cls === 'team-a';
+    const scorersArr = isTeamA ? (currentDraft.scorersA || []) : (currentDraft.scorersB || []);
+
+    const rows = players.map((p, i) => {
+      const gCount = scorersArr.filter(id => id === p.id).length;
+      return (
+        `<div class="draft-team-player-row">` +
+        `<span class="draft-pick-num">${i + 1}.</span>` +
+        `<span style="flex:1; font-weight:600;">${escapeHtml(p.nome)}</span>` +
+        `<span style="font-size:12px; color:var(--gold-dark); font-weight:700; margin-right:12px;">★ ${getPlayerRating(p).toFixed(1)}</span>` +
+        `<div style="display:flex; align-items:center; gap:8px;">` +
+        `<button class="btn btn-ghost" style="padding: 2px 8px; font-size:14px; color:var(--danger); border:1px solid var(--line);" data-action="draft-goal-sub" data-side="${isTeamA ? 'A' : 'B'}" data-pid="${escapeHtml(p.id)}">-</button>` +
+        `<span style="font-weight:700; color:var(--pitch-600); min-width:14px; text-align:center;">${gCount}</span>` +
+        `<button class="btn btn-ghost" style="padding: 2px 8px; font-size:14px; color:var(--pitch-600); border:1px solid var(--line);" data-action="draft-goal-add" data-side="${isTeamA ? 'A' : 'B'}" data-pid="${escapeHtml(p.id)}">⚽+</button>` +
+        `</div>` +
+        `</div>`
+      );
+    }).join('');
+
+    return (
+      `<div class="draft-team-card ${cls}">` +
+      `<div class="draft-team-name">${escapeHtml(nome)}</div>` +
+      `<div class="draft-team-rating-total">Rating total: ${cls === 'team-a' ? ratingA : ratingB}</div>` +
+      rows +
+      `</div>`
+    );
+  }
+
+  dom.draftTeamsResult.innerHTML =
+    `<div class="draft-teams-grid">` +
+    teamCard(nomeA, equipaA, 'team-a') +
+    teamCard(nomeB, equipaB, 'team-b') +
+    `<div class="draft-balance-bar">Diferença de rating: <span class="draft-balance-diff">${diff} ★</span></div>` +
+    `</div>`;
+
+  // Bind draft goal buttons
+  dom.draftTeamsResult.querySelectorAll('[data-action="draft-goal-add"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const side = btn.dataset.side;
+      const pid = btn.dataset.pid;
+      if (side === 'A') {
+        if (!currentDraft.scorersA) currentDraft.scorersA = [];
+        currentDraft.scorersA.push(pid);
+        if (dom.draftScoreA) dom.draftScoreA.value = (parseInt(dom.draftScoreA.value || 0, 10) + 1);
+      } else {
+        if (!currentDraft.scorersB) currentDraft.scorersB = [];
+        currentDraft.scorersB.push(pid);
+        if (dom.draftScoreB) dom.draftScoreB.value = (parseInt(dom.draftScoreB.value || 0, 10) + 1);
+      }
+      renderDraftTeams(nomeA, nomeB, equipaA, equipaB);
+    });
+  });
+
+  dom.draftTeamsResult.querySelectorAll('[data-action="draft-goal-sub"]').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const side = btn.dataset.side;
+      const pid = btn.dataset.pid;
+      const arr = side === 'A' ? (currentDraft.scorersA || []) : (currentDraft.scorersB || []);
+      const idx = arr.indexOf(pid);
+      if (idx !== -1) {
+        arr.splice(idx, 1);
+        if (side === 'A' && dom.draftScoreA) dom.draftScoreA.value = Math.max(0, (parseInt(dom.draftScoreA.value || 0, 10) - 1));
+        if (side === 'B' && dom.draftScoreB) dom.draftScoreB.value = Math.max(0, (parseInt(dom.draftScoreB.value || 0, 10) - 1));
+        renderDraftTeams(nomeA, nomeB, equipaA, equipaB);
+      }
+    });
+  });
+
+  // Update score labels
+  if (dom.draftLabelA) dom.draftLabelA.textContent = nomeA || 'Equipa A';
+  if (dom.draftLabelB) dom.draftLabelB.textContent = nomeB || 'Equipa B';
+
+  if (dom.draftResultCard) dom.draftResultCard.style.display = 'block';
+}
+
+export function renderSingularHistorico() {
+  if (!dom.singularHistoricoList) return;
+
+  if (!state.jogosSingulares.length) {
+    dom.singularHistoricoList.innerHTML = '<p class="empty">Ainda não há jogos registados.</p>';
+    return;
+  }
+
+  const sorted = state.jogosSingulares.slice().reverse();
+  const cards = sorted.map((jogo) => {
+    const dateStr = fmtTimestamp(jogo.data);
+    const playersA = (jogo.equipaA || []).map((pid) => {
+      const p = state.players.find((pl) => pl.id === pid);
+      return p ? p.nome : pid;
+    }).join(', ');
+    const playersB = (jogo.equipaB || []).map((pid) => {
+      const p = state.players.find((pl) => pl.id === pid);
+      return p ? p.nome : pid;
+    }).join(', ');
+
+    return (
+      `<div class="historico-card">` +
+      `<div class="historico-header">` +
+      `<span class="historico-date">📅 ${dateStr}</span>` +
+      `<button class="btn btn-ghost" style="font-size:12px; padding:4px 10px; border:1px solid var(--danger); color:var(--danger);" data-action="del-jogo" data-jid="${escapeHtml(jogo.id)}">🗑️</button>` +
+      `</div>` +
+      `<div class="historico-teams">` +
+      `<div>` +
+      `<div class="historico-team-name">${escapeHtml(jogo.nomeEquipaA)}</div>` +
+      `<div class="historico-team-players">${escapeHtml(playersA)}</div>` +
+      `</div>` +
+      `<div class="historico-resultado">${escapeHtml(jogo.resultado || '—')}</div>` +
+      `<div style="text-align:right;">` +
+      `<div class="historico-team-name">${escapeHtml(jogo.nomeEquipaB)}</div>` +
+      `<div class="historico-team-players">${escapeHtml(playersB)}</div>` +
+      `</div>` +
+      `</div>` +
+      `</div>`
+    );
+  }).join('');
+
+  dom.singularHistoricoList.innerHTML = cards;
+
+  dom.singularHistoricoList.querySelectorAll('[data-action="del-jogo"]').forEach((btn) => {
+    btn.addEventListener('click', async () => {
+      const jid = btn.dataset.jid;
+      openConfirm('Apagar Jogo', 'Tens a certeza que queres apagar este registo do histórico?', async () => {
+        const { persistJogosSingulares } = await import('./state.js');
+        state.jogosSingulares = state.jogosSingulares.filter((j) => j.id !== jid);
+        await persistJogosSingulares();
+        renderSingularHistorico();
+      });
+    });
+  });
 }
