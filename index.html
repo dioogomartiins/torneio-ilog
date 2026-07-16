@@ -1,1392 +1,1955 @@
 <!DOCTYPE html>
 <html lang="pt">
+
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Torneio — Gestor de Liga</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-<style>
-  :root{
-    --pitch-900:#0F2A1C;
-    --pitch-800:#153826;
-    --pitch-700:#1C4A32;
-    --pitch-600:#245E3F;
-    --pitch-500:#2F7A4F;
-    --gold:#CBA135;
-    --gold-dark:#A9832A;
-    --paper:#F1F4EE;
-    --card:#FFFFFF;
-    --ink:#152018;
-    --ink-soft:#51604F;
-    --ink-faint:#8A968A;
-    --line:#DCE3D7;
-    --silver:#C4C9C4;
-    --bronze:#C08552;
-    --danger:#B3261E;
-    --danger-bg:#FBEAE8;
-    --shadow-sm:0 1px 2px rgba(15,42,28,.07);
-    --shadow-md:0 6px 20px rgba(15,42,28,.10);
-    --radius:12px;
-    --radius-sm:8px;
-    --font-display:'Oswald','Arial Narrow',Impact,sans-serif;
-    --font-body:'Inter',-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;
-  }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Torneio — Gestor de Liga</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link
+    href="https://fonts.googleapis.com/css2?family=Oswald:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+    rel="stylesheet">
+  <style>
+    :root {
+      --pitch-900: #0F2A1C;
+      --pitch-800: #153826;
+      --pitch-700: #1C4A32;
+      --pitch-600: #245E3F;
+      --pitch-500: #2F7A4F;
+      --gold: #CBA135;
+      --gold-dark: #A9832A;
+      --paper: #F1F4EE;
+      --card: #FFFFFF;
+      --ink: #152018;
+      --ink-soft: #51604F;
+      --ink-faint: #8A968A;
+      --line: #DCE3D7;
+      --silver: #C4C9C4;
+      --bronze: #C08552;
+      --danger: #B3261E;
+      --danger-bg: #FBEAE8;
+      --shadow-sm: 0 1px 2px rgba(15, 42, 28, .07);
+      --shadow-md: 0 6px 20px rgba(15, 42, 28, .10);
+      --radius: 12px;
+      --radius-sm: 8px;
+      --font-display: 'Oswald', 'Arial Narrow', Impact, sans-serif;
+      --font-body: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    }
 
-  *{box-sizing:border-box;}
-  html{-webkit-text-size-adjust:100%;}
-  body{
-    margin:0;
-    font-family:var(--font-body);
-    background:var(--paper);
-    color:var(--ink);
-    line-height:1.45;
-    -webkit-font-smoothing:antialiased;
-  }
-  h1,h2,h3{font-family:var(--font-display);margin:0;letter-spacing:.01em;}
-  p{margin:0;}
-  button{font-family:var(--font-body);cursor:pointer;}
-  input{font-family:var(--font-body);}
-  table{border-collapse:collapse;width:100%;}
-  .num{font-variant-numeric:tabular-nums;}
+    * {
+      box-sizing: border-box;
+    }
 
-  :focus-visible{outline:3px solid var(--gold);outline-offset:2px;}
+    html {
+      -webkit-text-size-adjust: 100%;
+    }
 
-  .app{max-width:1080px;margin:0 auto;padding:0 0 48px;}
+    body {
+      margin: 0;
+      font-family: var(--font-body);
+      background: var(--paper);
+      color: var(--ink);
+      line-height: 1.45;
+      -webkit-font-smoothing: antialiased;
+    }
 
-  /* ---------- Marquee header ---------- */
-  .marquee{
-    position:relative;
-    background:linear-gradient(180deg,var(--pitch-800),var(--pitch-900));
-    color:#fff;
-    padding:22px 24px 18px;
-    overflow:hidden;
-  }
-  .marquee-lines{
-    position:absolute;inset:0;
-    background:repeating-linear-gradient(90deg,rgba(255,255,255,.04) 0 36px,transparent 36px 78px);
-    pointer-events:none;
-  }
-  .marquee-content{position:relative;max-width:1080px;margin:0 auto;}
-  .marquee-top{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;}
-  .eyebrow{
-    font-family:var(--font-display);
-    font-size:12px;
-    letter-spacing:.16em;
-    text-transform:uppercase;
-    color:var(--gold);
-    font-weight:600;
-  }
-  .header-pills{display:flex;align-items:center;gap:8px;flex-wrap:wrap;}
-  .save-pill{
-    font-size:11px;
-    letter-spacing:.04em;
-    padding:4px 10px;
-    border-radius:999px;
-    background:rgba(255,255,255,.12);
-    color:#dfe8de;
-    transition:background .2s,color .2s;
-  }
-  .save-pill.pill-ok{background:rgba(203,161,53,.22);color:var(--gold);}
-  .save-pill.pill-error{background:rgba(179,38,30,.28);color:#ffb4ae;}
-  /* NEW — backup pill */
-  .backup-pill{
-    font-size:11px;
-    letter-spacing:.04em;
-    padding:4px 10px;
-    border-radius:999px;
-    background:rgba(255,255,255,.08);
-    color:#9ab09a;
-    transition:background .2s,color .2s;
-  }
-  .backup-pill.pill-fresh{background:rgba(47,122,79,.28);color:#7dd8a0;}
-  #tournamentTitle{
-    font-size:clamp(28px,6vw,44px);
-    font-weight:700;
-    text-transform:uppercase;
-    margin:6px 0 10px;
-    line-height:1.05;
-  }
-  .marquee-ticker{
-    display:inline-block;
-    font-family:var(--font-display);
-    font-size:13px;
-    letter-spacing:.08em;
-    background:rgba(0,0,0,.28);
-    border:1px solid rgba(255,255,255,.14);
-    padding:5px 12px;
-    border-radius:6px;
-    color:#EAF0E7;
-  }
+    h1,
+    h2,
+    h3 {
+      font-family: var(--font-display);
+      margin: 0;
+      letter-spacing: .01em;
+    }
 
-  /* ---------- Toolbar ---------- */
-  .toolbar{
-    display:flex;gap:10px;flex-wrap:wrap;
-    padding:14px 24px;
-    background:var(--pitch-700);
-  }
-  /* NEW — toolbar separator */
-  .toolbar-sep{
-    width:1px;background:rgba(255,255,255,.2);
-    margin:0 2px;align-self:stretch;
-  }
-  .btn{
-    border:none;border-radius:8px;
-    padding:10px 16px;
-    font-size:14px;font-weight:600;
-    display:inline-flex;align-items:center;gap:7px;
-    transition:transform .12s ease,filter .12s ease;
-  }
-  .btn:active{transform:translateY(1px);}
-  .btn-gold{background:var(--gold);color:var(--pitch-900);}
-  .btn-gold:hover{filter:brightness(1.08);}
-  .btn-outline{background:transparent;color:#fff;border:1.5px solid rgba(255,255,255,.4);}
-  .btn-outline:hover{border-color:#fff;}
-  .btn-ghost{background:rgba(255,255,255,.1);color:#fff;}
-  .btn-ghost:hover{background:rgba(255,255,255,.18);}
-  .btn-danger{background:var(--danger);color:#fff;}
-  .btn-danger:hover{filter:brightness(1.08);}
-  /* NEW — teal import/export buttons */
-  .btn-teal{background:rgba(47,122,79,.55);color:#d0f0dc;border:1.5px solid rgba(125,216,160,.35);}
-  .btn-teal:hover{background:rgba(47,122,79,.80);}
-  .btn:disabled{opacity:.5;cursor:not-allowed;}
+    p {
+      margin: 0;
+    }
 
-  /* ---------- Tabs ---------- */
-  .tabs{
-    display:flex;gap:4px;
-    padding:10px 20px 0;
-    background:var(--card);
-    overflow-x:auto;
-    border-bottom:1px solid var(--line);
-  }
-  .tab{
-    background:none;border:none;
-    padding:10px 14px 12px;
-    font-size:14px;font-weight:600;
-    color:var(--ink-soft);
-    white-space:nowrap;
-    border-bottom:3px solid transparent;
-    flex:0 0 auto;
-  }
-  .tab.active{color:var(--pitch-800);border-bottom-color:var(--gold);}
-  .tab:hover:not(.active){color:var(--pitch-700);}
+    button {
+      font-family: var(--font-body);
+      cursor: pointer;
+    }
 
-  /* ---------- Content ---------- */
-  .content{padding:22px 20px 0;}
-  .panel{display:none;}
-  .panel.active{display:block;animation:fadein .25s ease;}
-  @keyframes fadein{from{opacity:0;transform:translateY(4px);}to{opacity:1;transform:translateY(0);}}
+    input {
+      font-family: var(--font-body);
+    }
 
-  .card{
-    background:var(--card);
-    border:1px solid var(--line);
-    border-radius:var(--radius);
-    padding:20px;
-    box-shadow:var(--shadow-sm);
-    margin-bottom:18px;
-  }
-  .section-title{
-    font-size:19px;
-    text-transform:uppercase;
-    letter-spacing:.02em;
-    color:var(--pitch-800);
-    margin-bottom:14px;
-    display:flex;align-items:center;gap:8px;
-  }
-  .section-sub{font-size:13px;color:var(--ink-faint);margin:-8px 0 16px;}
-  .grid-2{display:grid;grid-template-columns:1fr 1fr;gap:18px;}
-  @media (max-width:760px){.grid-2{grid-template-columns:1fr;}}
+    table {
+      border-collapse: collapse;
+      width: 100%;
+    }
 
-  /* ---------- Podium (dashboard) ---------- */
-  .podium{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px;}
-  @media (max-width:600px){.podium{grid-template-columns:1fr;}}
-  .podium-card{
-    border-radius:var(--radius);
-    padding:16px 14px;
-    color:#fff;
-    box-shadow:var(--shadow-sm);
-  }
-  .podium-1{background:linear-gradient(145deg,#D8B84A,var(--gold-dark));}
-  .podium-2{background:linear-gradient(145deg,#C9CDC8,#9AA29A);}
-  .podium-3{background:linear-gradient(145deg,#CE9868,var(--bronze));}
-  .podium-rank{font-family:var(--font-display);font-size:13px;opacity:.85;letter-spacing:.06em;}
-  .podium-name{font-family:var(--font-display);font-size:21px;font-weight:600;margin:2px 0 4px;text-transform:uppercase;}
-  .podium-pts{font-size:13px;opacity:.92;}
+    .num {
+      font-variant-numeric: tabular-nums;
+    }
 
-  /* ---------- Tables ---------- */
-  .table-wrap{overflow-x:auto;}
-  th,td{padding:9px 10px;text-align:left;font-size:14px;border-bottom:1px solid var(--line);}
-  th{
-    font-family:var(--font-display);
-    font-size:11px;letter-spacing:.08em;text-transform:uppercase;
-    color:var(--ink-faint);font-weight:600;
-  }
-  td.num,th.num{text-align:center;}
-  .standings-table td{text-align:center;}
-  .standings-table td.team-cell{text-align:left;font-weight:600;}
-  .standings-table td.pts-cell{font-weight:700;color:var(--pitch-800);}
-  .pos-badge{
-    display:inline-flex;align-items:center;justify-content:center;
-    width:24px;height:24px;border-radius:50%;
-    background:var(--paper);color:var(--ink-soft);
-    font-size:12px;font-weight:700;
-  }
-  tr.pos-gold .pos-badge{background:var(--gold);color:#fff;}
-  tr.pos-silver .pos-badge{background:var(--silver);color:#fff;}
-  tr.pos-bronze .pos-badge{background:var(--bronze);color:#fff;}
-  tr.pos-gold{background:rgba(203,161,53,.07);}
-  tr.pos-silver{background:rgba(196,201,196,.10);}
-  tr.pos-bronze{background:rgba(192,133,82,.07);}
-  .mini-table td,.mini-table th{padding:6px 8px;font-size:13px;}
+    :focus-visible {
+      outline: 3px solid var(--gold);
+      outline-offset: 2px;
+    }
 
-  /* ---------- Forms ---------- */
-  .form-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:14px 18px;}
-  @media (max-width:600px){.form-grid{grid-template-columns:1fr;}}
-  .field label{
-    display:block;font-size:12px;font-weight:600;
-    color:var(--ink-soft);margin-bottom:5px;
-    text-transform:uppercase;letter-spacing:.04em;
-  }
-  .input{
-    width:100%;
-    padding:9px 11px;
-    border:1.5px solid var(--line);
-    border-radius:var(--radius-sm);
-    font-size:14px;color:var(--ink);
-    background:#fff;
-    transition:border-color .15s;
-  }
-  .input:focus{border-color:var(--pitch-500);}
-  .input-invalid{border-color:var(--danger)!important;background:var(--danger-bg);}
-  .field-note{font-size:12px;color:var(--ink-faint);margin-top:5px;}
-  .hint-box{
-    margin-top:6px;font-size:13px;color:var(--pitch-700);
-    background:rgba(47,122,79,.08);border:1px solid rgba(47,122,79,.18);
-    border-radius:var(--radius-sm);padding:9px 11px;
-  }
+    .app {
+      max-width: 1080px;
+      margin: 0 auto;
+      padding: 0 0 48px;
+    }
 
-  /* ---------- Teams ---------- */
-  .teams-grid{display:grid;grid-template-columns:repeat(2,1fr);gap:8px 20px;}
-  @media (max-width:640px){.teams-grid{grid-template-columns:1fr;}}
-  .team-row{display:flex;align-items:center;gap:9px;padding:4px 0;}
-  .team-num{
-    font-family:var(--font-display);font-size:12px;color:var(--ink-faint);
-    width:22px;text-align:right;flex:0 0 auto;
-  }
-  .team-row-inactive .team-input{color:var(--ink-faint);background:#FAFBF9;}
-  .team-tag{font-size:10px;color:var(--ink-faint);white-space:nowrap;flex:0 0 auto;}
+    /* ---------- Marquee header ---------- */
+    .marquee {
+      position: relative;
+      background: linear-gradient(180deg, var(--pitch-800), var(--pitch-900));
+      color: #fff;
+      padding: 22px 24px 18px;
+      overflow: hidden;
+    }
 
-  /* ---------- Rounds (calendar/results) ---------- */
-  .round-card{margin-bottom:14px;}
-  .round-head{
-    font-family:var(--font-display);
-    font-size:13px;letter-spacing:.06em;text-transform:uppercase;
-    color:#fff;background:var(--pitch-600);
-    padding:6px 12px;border-radius:6px 6px 0 0;
-    display:inline-block;
-  }
-  .round-games{
-    border:1px solid var(--line);border-top:none;border-radius:0 8px 8px 8px;
-    background:#fff;
-  }
-  .fixture{
-    display:grid;grid-template-columns:1fr auto 1fr;align-items:center;gap:10px;
-    padding:9px 14px;border-bottom:1px solid var(--line);font-size:14px;
-  }
-  .fixture:last-child{border-bottom:none;}
-  .fx-home{text-align:right;font-weight:600;}
-  .fx-away{text-align:left;font-weight:600;}
-  .fx-vs{color:var(--ink-faint);font-size:11px;font-family:var(--font-display);letter-spacing:.05em;}
-  .fixture-bye{grid-template-columns:1fr;text-align:center;color:var(--ink-faint);font-style:italic;font-size:13px;}
-  .fixture-input .fx-home,.fixture-input .fx-away{font-weight:500;}
-  .result-input{
-    width:74px;text-align:center;font-family:var(--font-display);font-size:15px;
-    padding:6px 4px;justify-self:center;
-  }
+    .marquee-lines {
+      position: absolute;
+      inset: 0;
+      background: repeating-linear-gradient(90deg, rgba(255, 255, 255, .04) 0 36px, transparent 36px 78px);
+      pointer-events: none;
+    }
 
-  /* ---------- Stats ---------- */
-  .stats-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;}
-  @media (max-width:760px){.stats-grid{grid-template-columns:repeat(2,1fr);}}
-  @media (max-width:480px){.stats-grid{grid-template-columns:1fr;}}
-  .stat-card{
-    background:var(--paper);border:1px solid var(--line);border-radius:var(--radius-sm);
-    padding:13px 14px;
-  }
-  .stat-label{font-size:11px;text-transform:uppercase;letter-spacing:.05em;color:var(--ink-faint);margin-bottom:5px;}
-  .stat-value{font-family:var(--font-display);font-size:19px;font-weight:600;color:var(--pitch-800);}
+    .marquee-content {
+      position: relative;
+      max-width: 1080px;
+      margin: 0 auto;
+    }
 
-  .empty{color:var(--ink-faint);font-size:14px;padding:14px 2px;font-style:italic;}
+    .marquee-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
 
-  /* ---------- Modal ---------- */
-  .modal-overlay{
-    position:fixed;inset:0;background:rgba(15,42,28,.5);
-    display:flex;align-items:center;justify-content:center;padding:20px;z-index:50;
-  }
-  .modal-overlay[hidden]{display:none;}
-  .modal{
-    background:#fff;border-radius:var(--radius);padding:22px;max-width:400px;width:100%;
-    box-shadow:var(--shadow-md);
-  }
-  .modal h3{font-size:18px;color:var(--pitch-800);margin-bottom:9px;text-transform:uppercase;}
-  .modal p{font-size:14px;color:var(--ink-soft);line-height:1.5;}
-  .modal-actions{display:flex;justify-content:flex-end;gap:10px;margin-top:18px;}
+    .eyebrow {
+      font-family: var(--font-display);
+      font-size: 12px;
+      letter-spacing: .16em;
+      text-transform: uppercase;
+      color: var(--gold);
+      font-weight: 600;
+    }
 
-  /* ---------- Toast ---------- */
-  .toast-root{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);z-index:60;display:flex;flex-direction:column;gap:8px;align-items:center;}
-  .toast{
-    background:var(--pitch-900);color:#fff;padding:10px 18px;border-radius:8px;font-size:13px;
-    box-shadow:var(--shadow-md);opacity:0;transform:translateY(8px);transition:opacity .25s,transform .25s;
-    max-width:90vw;text-align:center;
-  }
-  .toast.show{opacity:1;transform:translateY(0);}
-  .toast-error{background:var(--danger);}
-  .toast-ok{background:var(--pitch-600);}
+    .header-pills {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
 
-  .foot{padding:22px 20px 10px;text-align:center;color:var(--ink-faint);font-size:12px;}
+    .save-pill {
+      font-size: 11px;
+      letter-spacing: .04em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .12);
+      color: #dfe8de;
+      transition: background .2s, color .2s;
+    }
 
-  @media (prefers-reduced-motion:reduce){
-    *{animation:none!important;transition:none!important;}
-  }
-</style>
+    .save-pill.pill-ok {
+      background: rgba(203, 161, 53, .22);
+      color: var(--gold);
+    }
+
+    .save-pill.pill-error {
+      background: rgba(179, 38, 30, .28);
+      color: #ffb4ae;
+    }
+
+    /* NEW — backup pill */
+    .backup-pill {
+      font-size: 11px;
+      letter-spacing: .04em;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(255, 255, 255, .08);
+      color: #9ab09a;
+      transition: background .2s, color .2s;
+    }
+
+    .backup-pill.pill-fresh {
+      background: rgba(47, 122, 79, .28);
+      color: #7dd8a0;
+    }
+
+    #tournamentTitle {
+      font-size: clamp(28px, 6vw, 44px);
+      font-weight: 700;
+      text-transform: uppercase;
+      margin: 6px 0 10px;
+      line-height: 1.05;
+    }
+
+    .marquee-ticker {
+      display: inline-block;
+      font-family: var(--font-display);
+      font-size: 13px;
+      letter-spacing: .08em;
+      background: rgba(0, 0, 0, .28);
+      border: 1px solid rgba(255, 255, 255, .14);
+      padding: 5px 12px;
+      border-radius: 6px;
+      color: #EAF0E7;
+    }
+
+    /* ---------- Toolbar ---------- */
+    .toolbar {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      padding: 14px 24px;
+      background: var(--pitch-700);
+    }
+
+    /* NEW — toolbar separator */
+    .toolbar-sep {
+      width: 1px;
+      background: rgba(255, 255, 255, .2);
+      margin: 0 2px;
+      align-self: stretch;
+    }
+
+    .btn {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 16px;
+      font-size: 14px;
+      font-weight: 600;
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      transition: transform .12s ease, filter .12s ease;
+    }
+
+    .btn:active {
+      transform: translateY(1px);
+    }
+
+    .btn-gold {
+      background: var(--gold);
+      color: var(--pitch-900);
+    }
+
+    .btn-gold:hover {
+      filter: brightness(1.08);
+    }
+
+    .btn-outline {
+      background: transparent;
+      color: #fff;
+      border: 1.5px solid rgba(255, 255, 255, .4);
+    }
+
+    .btn-outline:hover {
+      border-color: #fff;
+    }
+
+    .btn-ghost {
+      background: rgba(255, 255, 255, .1);
+      color: #fff;
+    }
+
+    .btn-ghost:hover {
+      background: rgba(255, 255, 255, .18);
+    }
+
+    .btn-danger {
+      background: var(--danger);
+      color: #fff;
+    }
+
+    .btn-danger:hover {
+      filter: brightness(1.08);
+    }
+
+    /* NEW — teal import/export buttons */
+    .btn-teal {
+      background: rgba(47, 122, 79, .55);
+      color: #d0f0dc;
+      border: 1.5px solid rgba(125, 216, 160, .35);
+    }
+
+    .btn-teal:hover {
+      background: rgba(47, 122, 79, .80);
+    }
+
+    .btn:disabled {
+      opacity: .5;
+      cursor: not-allowed;
+    }
+
+    /* ---------- Tabs ---------- */
+    .tabs {
+      display: flex;
+      gap: 4px;
+      padding: 10px 20px 0;
+      background: var(--card);
+      overflow-x: auto;
+      border-bottom: 1px solid var(--line);
+    }
+
+    .tab {
+      background: none;
+      border: none;
+      padding: 10px 14px 12px;
+      font-size: 14px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      white-space: nowrap;
+      border-bottom: 3px solid transparent;
+      flex: 0 0 auto;
+    }
+
+    .tab.active {
+      color: var(--pitch-800);
+      border-bottom-color: var(--gold);
+    }
+
+    .tab:hover:not(.active) {
+      color: var(--pitch-700);
+    }
+
+    /* ---------- Content ---------- */
+    .content {
+      padding: 22px 20px 0;
+    }
+
+    .panel {
+      display: none;
+    }
+
+    .panel.active {
+      display: block;
+      animation: fadein .25s ease;
+    }
+
+    @keyframes fadein {
+      from {
+        opacity: 0;
+        transform: translateY(4px);
+      }
+
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    .card {
+      background: var(--card);
+      border: 1px solid var(--line);
+      border-radius: var(--radius);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+      margin-bottom: 18px;
+    }
+
+    .section-title {
+      font-size: 19px;
+      text-transform: uppercase;
+      letter-spacing: .02em;
+      color: var(--pitch-800);
+      margin-bottom: 14px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .section-sub {
+      font-size: 13px;
+      color: var(--ink-faint);
+      margin: -8px 0 16px;
+    }
+
+    .grid-2 {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    @media (max-width:760px) {
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    /* ---------- Podium (dashboard) ---------- */
+    .podium {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-bottom: 18px;
+    }
+
+    @media (max-width:600px) {
+      .podium {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .podium-card {
+      border-radius: var(--radius);
+      padding: 16px 14px;
+      color: #fff;
+      box-shadow: var(--shadow-sm);
+    }
+
+    .podium-1 {
+      background: linear-gradient(145deg, #D8B84A, var(--gold-dark));
+    }
+
+    .podium-2 {
+      background: linear-gradient(145deg, #C9CDC8, #9AA29A);
+    }
+
+    .podium-3 {
+      background: linear-gradient(145deg, #CE9868, var(--bronze));
+    }
+
+    .podium-rank {
+      font-family: var(--font-display);
+      font-size: 13px;
+      opacity: .85;
+      letter-spacing: .06em;
+    }
+
+    .podium-name {
+      font-family: var(--font-display);
+      font-size: 21px;
+      font-weight: 600;
+      margin: 2px 0 4px;
+      text-transform: uppercase;
+    }
+
+    .podium-pts {
+      font-size: 13px;
+      opacity: .92;
+    }
+
+    /* ---------- Tables ---------- */
+    .table-wrap {
+      overflow-x: auto;
+    }
+
+    th,
+    td {
+      padding: 9px 10px;
+      text-align: left;
+      font-size: 14px;
+      border-bottom: 1px solid var(--line);
+    }
+
+    th {
+      font-family: var(--font-display);
+      font-size: 11px;
+      letter-spacing: .08em;
+      text-transform: uppercase;
+      color: var(--ink-faint);
+      font-weight: 600;
+    }
+
+    td.num,
+    th.num {
+      text-align: center;
+    }
+
+    .standings-table td {
+      text-align: center;
+    }
+
+    .standings-table td.team-cell {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .standings-table td.pts-cell {
+      font-weight: 700;
+      color: var(--pitch-800);
+    }
+
+    .pos-badge {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background: var(--paper);
+      color: var(--ink-soft);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    tr.pos-gold .pos-badge {
+      background: var(--gold);
+      color: #fff;
+    }
+
+    tr.pos-silver .pos-badge {
+      background: var(--silver);
+      color: #fff;
+    }
+
+    tr.pos-bronze .pos-badge {
+      background: var(--bronze);
+      color: #fff;
+    }
+
+    tr.pos-gold {
+      background: rgba(203, 161, 53, .07);
+    }
+
+    tr.pos-silver {
+      background: rgba(196, 201, 196, .10);
+    }
+
+    tr.pos-bronze {
+      background: rgba(192, 133, 82, .07);
+    }
+
+    .mini-table td,
+    .mini-table th {
+      padding: 6px 8px;
+      font-size: 13px;
+    }
+
+    /* ---------- Forms ---------- */
+    .form-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 14px 18px;
+    }
+
+    @media (max-width:600px) {
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .field label {
+      display: block;
+      font-size: 12px;
+      font-weight: 600;
+      color: var(--ink-soft);
+      margin-bottom: 5px;
+      text-transform: uppercase;
+      letter-spacing: .04em;
+    }
+
+    .input {
+      width: 100%;
+      padding: 9px 11px;
+      border: 1.5px solid var(--line);
+      border-radius: var(--radius-sm);
+      font-size: 14px;
+      color: var(--ink);
+      background: #fff;
+      transition: border-color .15s;
+    }
+
+    .input:focus {
+      border-color: var(--pitch-500);
+    }
+
+    .input-invalid {
+      border-color: var(--danger) !important;
+      background: var(--danger-bg);
+    }
+
+    .field-note {
+      font-size: 12px;
+      color: var(--ink-faint);
+      margin-top: 5px;
+    }
+
+    .hint-box {
+      margin-top: 6px;
+      font-size: 13px;
+      color: var(--pitch-700);
+      background: rgba(47, 122, 79, .08);
+      border: 1px solid rgba(47, 122, 79, .18);
+      border-radius: var(--radius-sm);
+      padding: 9px 11px;
+    }
+
+    /* ---------- Teams ---------- */
+    .teams-grid {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 8px 20px;
+    }
+
+    @media (max-width:640px) {
+      .teams-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .team-row {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      padding: 4px 0;
+    }
+
+    .team-num {
+      font-family: var(--font-display);
+      font-size: 12px;
+      color: var(--ink-faint);
+      width: 22px;
+      text-align: right;
+      flex: 0 0 auto;
+    }
+
+    .team-row-inactive .team-input {
+      color: var(--ink-faint);
+      background: #FAFBF9;
+    }
+
+    .team-tag {
+      font-size: 10px;
+      color: var(--ink-faint);
+      white-space: nowrap;
+      flex: 0 0 auto;
+    }
+
+    /* ---------- Rounds (calendar/results) ---------- */
+    .round-card {
+      margin-bottom: 14px;
+    }
+
+    .round-head {
+      font-family: var(--font-display);
+      font-size: 13px;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+      color: #fff;
+      background: var(--pitch-600);
+      padding: 6px 12px;
+      border-radius: 6px 6px 0 0;
+      display: inline-block;
+    }
+
+    .round-games {
+      border: 1px solid var(--line);
+      border-top: none;
+      border-radius: 0 8px 8px 8px;
+      background: #fff;
+    }
+
+    .fixture {
+      display: grid;
+      grid-template-columns: 1fr auto 1fr;
+      align-items: center;
+      gap: 10px;
+      padding: 9px 14px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .fixture:last-child {
+      border-bottom: none;
+    }
+
+    .fx-home {
+      text-align: right;
+      font-weight: 600;
+    }
+
+    .fx-away {
+      text-align: left;
+      font-weight: 600;
+    }
+
+    .fx-vs {
+      color: var(--ink-faint);
+      font-size: 11px;
+      font-family: var(--font-display);
+      letter-spacing: .05em;
+    }
+
+    .fixture-bye {
+      grid-template-columns: 1fr;
+      text-align: center;
+      color: var(--ink-faint);
+      font-style: italic;
+      font-size: 13px;
+    }
+
+    .fixture-input .fx-home,
+    .fixture-input .fx-away {
+      font-weight: 500;
+    }
+
+    .result-split {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      justify-self: center;
+    }
+
+    .res-box {
+      width: 40px;
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 15px;
+      padding: 6px 4px;
+      /* Remove as setas nativas dos campos de número */
+      -moz-appearance: textfield;
+    }
+
+    .res-box::-webkit-outer-spin-button,
+    .res-box::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .res-sep {
+      color: var(--ink-faint);
+      font-weight: 600;
+    }
+
+    /* ---------- Stats ---------- */
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+    }
+
+    @media (max-width:760px) {
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+
+    @media (max-width:480px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    .stat-card {
+      background: var(--paper);
+      border: 1px solid var(--line);
+      border-radius: var(--radius-sm);
+      padding: 13px 14px;
+    }
+
+    .stat-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: .05em;
+      color: var(--ink-faint);
+      margin-bottom: 5px;
+    }
+
+    .stat-value {
+      font-family: var(--font-display);
+      font-size: 19px;
+      font-weight: 600;
+      color: var(--pitch-800);
+    }
+
+    .empty {
+      color: var(--ink-faint);
+      font-size: 14px;
+      padding: 14px 2px;
+      font-style: italic;
+    }
+
+    /* ---------- Modal ---------- */
+    .modal-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(15, 42, 28, .5);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      z-index: 50;
+    }
+
+    .modal-overlay[hidden] {
+      display: none;
+    }
+
+    .modal {
+      background: #fff;
+      border-radius: var(--radius);
+      padding: 22px;
+      max-width: 400px;
+      width: 100%;
+      box-shadow: var(--shadow-md);
+    }
+
+    .modal h3 {
+      font-size: 18px;
+      color: var(--pitch-800);
+      margin-bottom: 9px;
+      text-transform: uppercase;
+    }
+
+    .modal p {
+      font-size: 14px;
+      color: var(--ink-soft);
+      line-height: 1.5;
+    }
+
+    .modal-actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 18px;
+    }
+
+    /* ---------- Toast ---------- */
+    .toast-root {
+      position: fixed;
+      bottom: 18px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 60;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      align-items: center;
+    }
+
+    .toast {
+      background: var(--pitch-900);
+      color: #fff;
+      padding: 10px 18px;
+      border-radius: 8px;
+      font-size: 13px;
+      box-shadow: var(--shadow-md);
+      opacity: 0;
+      transform: translateY(8px);
+      transition: opacity .25s, transform .25s;
+      max-width: 90vw;
+      text-align: center;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .toast-error {
+      background: var(--danger);
+    }
+
+    .toast-ok {
+      background: var(--pitch-600);
+    }
+
+    .foot {
+      padding: 22px 20px 10px;
+      text-align: center;
+      color: var(--ink-faint);
+      font-size: 12px;
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
+      }
+    }
+  </style>
 </head>
+
 <body>
-<div class="app">
+  <div class="app">
 
-  <header class="marquee">
-    <div class="marquee-lines" aria-hidden="true"></div>
-    <div class="marquee-content">
-      <div class="marquee-top">
-        <span class="eyebrow">Gestor de Torneio</span>
-        <div class="header-pills">
-          <span class="save-pill" id="savePill">Guardado</span>
-          <span class="backup-pill" id="backupPill">Sem backup</span>
+    <header class="marquee">
+      <div class="marquee-lines" aria-hidden="true"></div>
+      <div class="marquee-content">
+        <div class="marquee-top">
+          <span class="eyebrow">Gestor de Torneio</span>
+          <div class="header-pills">
+            <span class="save-pill" id="savePill">Guardado</span>
+            <span class="backup-pill" id="backupPill">Sem backup</span>
+          </div>
         </div>
+        <h1 id="tournamentTitle">TORNEIO 2026</h1>
+        <span class="marquee-ticker" id="marqueeTicker">—</span>
       </div>
-      <h1 id="tournamentTitle">TORNEIO 2026</h1>
-      <span class="marquee-ticker" id="marqueeTicker">—</span>
-    </div>
-  </header>
+    </header>
 
-  <div class="toolbar">
-    <button class="btn btn-gold" id="btnGerarCalendario">🔄 Gerar Calendário</button>
-    <button class="btn btn-outline" id="btnNovoTorneio">🧹 Novo Torneio</button>
-    <button class="btn btn-ghost" id="btnAtualizar">🔁 Atualizar</button>
-    <div class="toolbar-sep" aria-hidden="true"></div>
-    <button class="btn btn-teal" id="btnExportar">⬇️ Exportar JSON</button>
-    <button class="btn btn-teal" id="btnImportar">⬆️ Importar JSON</button>
-    <input type="file" id="inputImportar" accept=".json,application/json" style="display:none">
+    <div class="toolbar">
+      <button class="btn btn-gold" id="btnGerarCalendario">🔄 Gerar Calendário</button>
+      <button class="btn btn-outline" id="btnNovoTorneio">🧹 Novo Torneio</button>
+      <button class="btn btn-ghost" id="btnAtualizar">🔁 Atualizar</button>
+      <div class="toolbar-sep" aria-hidden="true"></div>
+      <button class="btn btn-teal" id="btnExportar">⬇️ Exportar JSON</button>
+      <button class="btn btn-teal" id="btnImportar">⬆️ Importar JSON</button>
+      <input type="file" id="inputImportar" accept=".json,application/json" style="display:none">
+    </div>
+
+    <nav class="tabs" id="tabs">
+      <button class="tab active" data-tab="dashboard">🏠 Dashboard</button>
+      <button class="tab" data-tab="config">⚙️ Configuração</button>
+      <button class="tab" data-tab="teams">👥 Equipas</button>
+      <button class="tab" data-tab="calendar">📅 Calendário</button>
+      <button class="tab" data-tab="results">⚽ Resultados</button>
+      <button class="tab" data-tab="standings">🏆 Classificação</button>
+      <button class="tab" data-tab="stats">📊 Estatísticas</button>
+    </nav>
+
+    <main class="content">
+
+      <!-- DASHBOARD -->
+      <section id="tab-dashboard" class="panel active">
+        <div class="card">
+          <div class="section-title">🏆 Classificação — Top 3</div>
+          <div class="podium" id="dashboardPodium"></div>
+          <div id="dashboardStandings"></div>
+        </div>
+        <div class="card">
+          <div class="section-title">⚽ Estatísticas</div>
+          <div class="stats-grid" id="dashboardStats"></div>
+        </div>
+      </section>
+
+      <!-- CONFIGURAÇÃO -->
+      <section id="tab-config" class="panel">
+        <div class="card">
+          <div class="section-title">⚙️ Definições gerais</div>
+          <div class="form-grid">
+            <div class="field">
+              <label for="cfgNome">Nome do torneio</label>
+              <input type="text" id="cfgNome" class="input" maxlength="60">
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">⚽ Formato do torneio</div>
+          <p class="section-sub">Estes dois campos só entram em vigor depois de clicares em <strong>🔄 Gerar
+              Calendário</strong>, na barra do topo.</p>
+          <div class="form-grid">
+            <div class="field">
+              <label for="cfgNumEquipas">Número de equipas (2–32)</label>
+              <input type="number" id="cfgNumEquipas" class="input" min="2" max="32" step="1">
+            </div>
+            <div class="field">
+              <label for="cfgNumVoltas">Número de voltas</label>
+              <input type="number" id="cfgNumVoltas" class="input" min="1" max="20" step="1">
+              <p class="field-note">1 = cada equipa joga uma vez · 2 = casa e fora · 3+ = repetição configurável</p>
+            </div>
+          </div>
+          <div class="hint-box" id="scheduleHint"></div>
+        </div>
+
+        <div class="card">
+          <div class="section-title">📐 Pontuação</div>
+          <div class="form-grid">
+            <div class="field"><label for="cfgVitoria">Vitória</label><input type="number" id="cfgVitoria" class="input"
+                min="0" step="1"></div>
+            <div class="field"><label for="cfgEmpate">Empate</label><input type="number" id="cfgEmpate" class="input"
+                min="0" step="1"></div>
+            <div class="field"><label for="cfgDerrota">Derrota</label><input type="number" id="cfgDerrota" class="input"
+                min="0" step="1"></div>
+            <div class="field"><label for="cfgBonus">Bónus (vitória por goleada)</label><input type="number"
+                id="cfgBonus" class="input" min="0" step="1"></div>
+            <div class="field">
+              <label for="cfgGoleada">Golos marcados para bónus</label>
+              <input type="number" id="cfgGoleada" class="input" min="1" step="1">
+            </div>
+          </div>
+          <p class="field-note" style="margin-top:10px;">Exemplo: Porto 4–1 Benfica com vitória=3 e bónus=1 a partir de
+            3 golos marcados → Porto fica com 3+1 = 4 pontos.</p>
+        </div>
+      </section>
+
+      <!-- EQUIPAS -->
+      <section id="tab-teams" class="panel">
+        <div class="card">
+          <div class="section-title">👥 Equipas (até 32)</div>
+          <p class="section-sub">Muda os nomes livremente — o calendário, os resultados e a classificação atualizam-se
+            sozinhos. Linhas a cinzento estão fora do calendário atual.</p>
+          <div class="teams-grid" id="teamsList"></div>
+        </div>
+      </section>
+
+      <!-- CALENDÁRIO -->
+      <section id="tab-calendar" class="panel">
+        <div class="card">
+          <div class="section-title">📅 Calendário</div>
+          <p class="section-sub">Gerado automaticamente pelo algoritmo de Berger.</p>
+          <div id="calendarList"></div>
+        </div>
+      </section>
+
+      <!-- RESULTADOS -->
+      <section id="tab-results" class="panel">
+        <div class="card">
+          <div class="section-title">⚽ Resultados</div>
+          <p class="section-sub">Introduz o resultado na caixa respetiva. Tudo o resto é automático.</p>
+          <div id="resultsList"></div>
+        </div>
+      </section>
+
+      <!-- CLASSIFICAÇÃO -->
+      <section id="tab-standings" class="panel">
+        <div class="card">
+          <div class="section-title">🏆 Classificação</div>
+          <div class="table-wrap">
+            <table class="standings-table">
+              <thead>
+                <tr>
+                  <th>Pos</th>
+                  <th style="text-align:left;">Equipa</th>
+                  <th>J</th>
+                  <th>V</th>
+                  <th>E</th>
+                  <th>D</th>
+                  <th>GM</th>
+                  <th>GS</th>
+                  <th>DG</th>
+                  <th>Pts</th>
+                </tr>
+              </thead>
+              <tbody id="standingsBody"></tbody>
+            </table>
+          </div>
+          <p class="field-note" style="margin-top:14px;">Critérios de desempate, por ordem: pontos → diferença de golos
+            → golos marcados → confronto direto (mini-tabela só com os jogos entre as equipas empatadas) → menos golos
+            sofridos → ordem alfabética.</p>
+        </div>
+      </section>
+
+      <!-- ESTATÍSTICAS -->
+      <section id="tab-stats" class="panel">
+        <div class="card">
+          <div class="section-title">📊 Estatísticas</div>
+          <div class="stats-grid" id="statsGrid"></div>
+        </div>
+      </section>
+
+    </main>
+
+    <p class="foot">Dados guardados automaticamente enquanto usas esta aplicação · nenhum dado sai do teu dispositivo.
+    </p>
   </div>
 
-  <nav class="tabs" id="tabs">
-    <button class="tab active" data-tab="dashboard">🏠 Dashboard</button>
-    <button class="tab" data-tab="config">⚙️ Configuração</button>
-    <button class="tab" data-tab="teams">👥 Equipas</button>
-    <button class="tab" data-tab="calendar">📅 Calendário</button>
-    <button class="tab" data-tab="results">⚽ Resultados</button>
-    <button class="tab" data-tab="standings">🏆 Classificação</button>
-    <button class="tab" data-tab="stats">📊 Estatísticas</button>
-  </nav>
-
-  <main class="content">
-
-    <!-- DASHBOARD -->
-    <section id="tab-dashboard" class="panel active">
-      <div class="card">
-        <div class="section-title">🏆 Classificação — Top 3</div>
-        <div class="podium" id="dashboardPodium"></div>
-        <div id="dashboardStandings"></div>
+  <div class="modal-overlay" id="modalOverlay" hidden>
+    <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalBody">
+      <h3 id="modalTitle"></h3>
+      <p id="modalBody"></p>
+      <div class="modal-actions">
+        <button class="btn btn-ghost" id="modalCancel"
+          style="color:var(--ink);background:var(--paper);">Cancelar</button>
+        <button class="btn btn-danger" id="modalConfirm">Confirmar</button>
       </div>
-      <div class="card">
-        <div class="section-title">⚽ Estatísticas</div>
-        <div class="stats-grid" id="dashboardStats"></div>
-      </div>
-    </section>
-
-    <!-- CONFIGURAÇÃO -->
-    <section id="tab-config" class="panel">
-      <div class="card">
-        <div class="section-title">⚙️ Definições gerais</div>
-        <div class="form-grid">
-          <div class="field">
-            <label for="cfgNome">Nome do torneio</label>
-            <input type="text" id="cfgNome" class="input" maxlength="60">
-          </div>
-        </div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">⚽ Formato do torneio</div>
-        <p class="section-sub">Estes dois campos só entram em vigor depois de clicares em <strong>🔄 Gerar Calendário</strong>, na barra do topo.</p>
-        <div class="form-grid">
-          <div class="field">
-            <label for="cfgNumEquipas">Número de equipas (2–32)</label>
-            <input type="number" id="cfgNumEquipas" class="input" min="2" max="32" step="1">
-          </div>
-          <div class="field">
-            <label for="cfgNumVoltas">Número de voltas</label>
-            <input type="number" id="cfgNumVoltas" class="input" min="1" max="20" step="1">
-            <p class="field-note">1 = cada equipa joga uma vez · 2 = casa e fora · 3+ = repetição configurável</p>
-          </div>
-        </div>
-        <div class="hint-box" id="scheduleHint"></div>
-      </div>
-
-      <div class="card">
-        <div class="section-title">📐 Pontuação</div>
-        <div class="form-grid">
-          <div class="field"><label for="cfgVitoria">Vitória</label><input type="number" id="cfgVitoria" class="input" min="0" step="1"></div>
-          <div class="field"><label for="cfgEmpate">Empate</label><input type="number" id="cfgEmpate" class="input" min="0" step="1"></div>
-          <div class="field"><label for="cfgDerrota">Derrota</label><input type="number" id="cfgDerrota" class="input" min="0" step="1"></div>
-          <div class="field"><label for="cfgBonus">Bónus (vitória por goleada)</label><input type="number" id="cfgBonus" class="input" min="0" step="1"></div>
-          <div class="field">
-            <label for="cfgGoleada">Golos marcados para bónus</label>
-            <input type="number" id="cfgGoleada" class="input" min="1" step="1">
-          </div>
-        </div>
-        <p class="field-note" style="margin-top:10px;">Exemplo: Porto 4–1 Benfica com vitória=3 e bónus=1 a partir de 3 golos marcados → Porto fica com 3+1 = 4 pontos.</p>
-      </div>
-    </section>
-
-    <!-- EQUIPAS -->
-    <section id="tab-teams" class="panel">
-      <div class="card">
-        <div class="section-title">👥 Equipas (até 32)</div>
-        <p class="section-sub">Muda os nomes livremente — o calendário, os resultados e a classificação atualizam-se sozinhos. Linhas a cinzento estão fora do calendário atual.</p>
-        <div class="teams-grid" id="teamsList"></div>
-      </div>
-    </section>
-
-    <!-- CALENDÁRIO -->
-    <section id="tab-calendar" class="panel">
-      <div class="card">
-        <div class="section-title">📅 Calendário</div>
-        <p class="section-sub">Gerado automaticamente pelo algoritmo de Berger.</p>
-        <div id="calendarList"></div>
-      </div>
-    </section>
-
-    <!-- RESULTADOS -->
-    <section id="tab-results" class="panel">
-      <div class="card">
-        <div class="section-title">⚽ Resultados</div>
-        <p class="section-sub">Só escreves o resultado no formato <strong>3-1</strong> ou <strong>0-0</strong>. Tudo o resto é automático.</p>
-        <div id="resultsList"></div>
-      </div>
-    </section>
-
-    <!-- CLASSIFICAÇÃO -->
-    <section id="tab-standings" class="panel">
-      <div class="card">
-        <div class="section-title">🏆 Classificação</div>
-        <div class="table-wrap">
-          <table class="standings-table">
-            <thead><tr>
-              <th>Pos</th><th style="text-align:left;">Equipa</th><th>J</th><th>V</th><th>E</th><th>D</th><th>GM</th><th>GS</th><th>DG</th><th>Pts</th>
-            </tr></thead>
-            <tbody id="standingsBody"></tbody>
-          </table>
-        </div>
-        <p class="field-note" style="margin-top:14px;">Critérios de desempate, por ordem: pontos → diferença de golos → golos marcados → confronto direto (mini-tabela só com os jogos entre as equipas empatadas) → menos golos sofridos → ordem alfabética.</p>
-      </div>
-    </section>
-
-    <!-- ESTATÍSTICAS -->
-    <section id="tab-stats" class="panel">
-      <div class="card">
-        <div class="section-title">📊 Estatísticas</div>
-        <div class="stats-grid" id="statsGrid"></div>
-      </div>
-    </section>
-
-  </main>
-
-  <p class="foot">Dados guardados automaticamente enquanto usas esta aplicação · nenhum dado sai do teu dispositivo.</p>
-</div>
-
-<div class="modal-overlay" id="modalOverlay" hidden>
-  <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalBody">
-    <h3 id="modalTitle"></h3>
-    <p id="modalBody"></p>
-    <div class="modal-actions">
-      <button class="btn btn-ghost" id="modalCancel" style="color:var(--ink);background:var(--paper);">Cancelar</button>
-      <button class="btn btn-danger" id="modalConfirm">Confirmar</button>
     </div>
   </div>
-</div>
 
-<div class="toast-root" id="toastRoot" aria-live="polite"></div>
+  <div class="toast-root" id="toastRoot" aria-live="polite"></div>
 
-<script>
-(function(){
-"use strict";
+  <script>
+    (function () {
+      "use strict";
 
-/* =========================================================
-   SNAPSHOT VERSION — bump when schema changes
-========================================================= */
-var SNAPSHOT_VERSION = 1;
+      /* =========================================================
+         SNAPSHOT VERSION — bump when schema changes
+      ========================================================= */
+      var SNAPSHOT_VERSION = 1;
 
-/* =========================================================
-   BERGER ROUND-ROBIN
-========================================================= */
-function bergerRounds(n){
-  var teams=[]; for(var i=0;i<n;i++) teams.push(i);
-  if(n%2!==0) teams.push(-1);
-  var total=teams.length;
-  var rounds=[];
-  var fixed=teams[0];
-  var rest=teams.slice(1);
-  for(var r=0;r<total-1;r++){
-    var l=[fixed].concat(rest);
-    var pairs=[]; var bye=null;
-    for(var k=0;k<total/2;k++){
-      var t1=l[k], t2=l[total-1-k];
-      if(r%2===1){ var tmp=t1; t1=t2; t2=tmp; }
-      if(t1===-1) bye=t2;
-      else if(t2===-1) bye=t1;
-      else pairs.push([t1,t2]);
-    }
-    rounds.push({pairs:pairs, bye:bye});
-    rest=[rest[rest.length-1]].concat(rest.slice(0,-1));
-  }
-  return rounds;
-}
-
-function generateSchedule(numTeams, numVoltas){
-  var base=bergerRounds(numTeams);
-  var schedule=[]; var roundsMeta=[]; var jornada=1;
-  for(var v=0; v<numVoltas; v++){
-    var mirror = v%2===1;
-    for(var ri=0; ri<base.length; ri++){
-      var round=base[ri];
-      for(var pi=0; pi<round.pairs.length; pi++){
-        var pair=round.pairs[pi];
-        var home=mirror?pair[1]:pair[0];
-        var away=mirror?pair[0]:pair[1];
-        schedule.push({jornada:jornada, home:home, away:away});
+      /* =========================================================
+         BERGER ROUND-ROBIN
+      ========================================================= */
+      function bergerRounds(n) {
+        var teams = []; for (var i = 0; i < n; i++) teams.push(i);
+        if (n % 2 !== 0) teams.push(-1);
+        var total = teams.length;
+        var rounds = [];
+        var fixed = teams[0];
+        var rest = teams.slice(1);
+        for (var r = 0; r < total - 1; r++) {
+          var l = [fixed].concat(rest);
+          var pairs = []; var bye = null;
+          for (var k = 0; k < total / 2; k++) {
+            var t1 = l[k], t2 = l[total - 1 - k];
+            if (r % 2 === 1) { var tmp = t1; t1 = t2; t2 = tmp; }
+            if (t1 === -1) bye = t2;
+            else if (t2 === -1) bye = t1;
+            else pairs.push([t1, t2]);
+          }
+          rounds.push({ pairs: pairs, bye: bye });
+          rest = [rest[rest.length - 1]].concat(rest.slice(0, -1));
+        }
+        return rounds;
       }
-      roundsMeta.push({jornada:jornada, bye:round.bye});
-      jornada++;
-    }
-  }
-  return {schedule:schedule, roundsMeta:roundsMeta};
-}
 
-/* =========================================================
-   STANDINGS
-========================================================= */
-function computeStandings(teamNames, schedule, results, config){
-  var stats=teamNames.map(function(name,idx){
-    return {idx:idx,name:name,J:0,V:0,E:0,D:0,GM:0,GS:0,Pts:0};
-  });
-  schedule.forEach(function(game,gi){
-    var res=results[gi];
-    if(!res) return;
-    var m=/^(\d+)-(\d+)$/.exec(String(res).trim());
-    if(!m) return;
-    var gc=parseInt(m[1],10), gf=parseInt(m[2],10);
-    var home=stats[game.home], away=stats[game.away];
-    home.J++; away.J++;
-    home.GM+=gc; home.GS+=gf;
-    away.GM+=gf; away.GS+=gc;
-    if(gc>gf){
-      home.V++; away.D++;
-      home.Pts += config.pontosVitoria + (gc>=config.golosGoleada?config.bonusGoleada:0);
-      away.Pts += config.pontosDerrota;
-    } else if(gc<gf){
-      away.V++; home.D++;
-      away.Pts += config.pontosVitoria + (gf>=config.golosGoleada?config.bonusGoleada:0);
-      home.Pts += config.pontosDerrota;
-    } else {
-      home.E++; away.E++;
-      home.Pts += config.pontosEmpate;
-      away.Pts += config.pontosEmpate;
-    }
-  });
-  stats.forEach(function(s){ s.DG = s.GM - s.GS; });
+      function generateSchedule(numTeams, numVoltas) {
+        var base = bergerRounds(numTeams);
+        var schedule = []; var roundsMeta = []; var jornada = 1;
+        for (var v = 0; v < numVoltas; v++) {
+          var mirror = v % 2 === 1;
+          for (var ri = 0; ri < base.length; ri++) {
+            var round = base[ri];
+            for (var pi = 0; pi < round.pairs.length; pi++) {
+              var pair = round.pairs[pi];
+              var home = mirror ? pair[1] : pair[0];
+              var away = mirror ? pair[0] : pair[1];
+              schedule.push({ jornada: jornada, home: home, away: away });
+            }
+            roundsMeta.push({ jornada: jornada, bye: round.bye });
+            jornada++;
+          }
+        }
+        return { schedule: schedule, roundsMeta: roundsMeta };
+      }
 
-  var arr = stats.slice().sort(function(a,b){
-    return (b.Pts-a.Pts) || (b.DG-a.DG) || (b.GM-a.GM);
-  });
+      /* =========================================================
+         STANDINGS
+      ========================================================= */
+      function computeStandings(teamNames, schedule, results, config) {
+        var stats = teamNames.map(function (name, idx) {
+          return { idx: idx, name: name, J: 0, V: 0, E: 0, D: 0, GM: 0, GS: 0, Pts: 0 };
+        });
+        schedule.forEach(function (game, gi) {
+          var res = results[gi];
+          if (!res) return;
+          var m = /^(\d+)-(\d+)$/.exec(String(res).trim());
+          if (!m) return;
+          var gc = parseInt(m[1], 10), gf = parseInt(m[2], 10);
+          var home = stats[game.home], away = stats[game.away];
+          home.J++; away.J++;
+          home.GM += gc; home.GS += gf;
+          away.GM += gf; away.GS += gc;
+          if (gc > gf) {
+            home.V++; away.D++;
+            home.Pts += config.pontosVitoria + (gc >= config.golosGoleada ? config.bonusGoleada : 0);
+            away.Pts += config.pontosDerrota;
+          } else if (gc < gf) {
+            away.V++; home.D++;
+            away.Pts += config.pontosVitoria + (gf >= config.golosGoleada ? config.bonusGoleada : 0);
+            home.Pts += config.pontosDerrota;
+          } else {
+            home.E++; away.E++;
+            home.Pts += config.pontosEmpate;
+            away.Pts += config.pontosEmpate;
+          }
+        });
+        stats.forEach(function (s) { s.DG = s.GM - s.GS; });
 
-  var finalArr=[]; var i=0;
-  while(i<arr.length){
-    var j=i+1;
-    while(j<arr.length && arr[j].Pts===arr[i].Pts && arr[j].DG===arr[i].DG && arr[j].GM===arr[i].GM) j++;
-    var cluster=arr.slice(i,j);
-    if(cluster.length>1) cluster=resolveHeadToHead(cluster, schedule, results, config);
-    finalArr=finalArr.concat(cluster);
-    i=j;
-  }
-  return finalArr;
-}
+        var arr = stats.slice().sort(function (a, b) {
+          return (b.Pts - a.Pts) || (b.DG - a.DG) || (b.GM - a.GM);
+        });
 
-function resolveHeadToHead(cluster, schedule, results, config){
-  var ids={}; cluster.forEach(function(c){ ids[c.idx]=true; });
-  var mini={}; cluster.forEach(function(c){ mini[c.idx]={pts:0,gm:0,gs:0}; });
-  schedule.forEach(function(game,gi){
-    var res=results[gi];
-    if(!res) return;
-    if(!ids[game.home] || !ids[game.away]) return;
-    var m=/^(\d+)-(\d+)$/.exec(String(res).trim());
-    if(!m) return;
-    var gc=parseInt(m[1],10), gf=parseInt(m[2],10);
-    mini[game.home].gm+=gc; mini[game.home].gs+=gf;
-    mini[game.away].gm+=gf; mini[game.away].gs+=gc;
-    if(gc>gf) mini[game.home].pts += config.pontosVitoria + (gc>=config.golosGoleada?config.bonusGoleada:0);
-    else if(gc<gf) mini[game.away].pts += config.pontosVitoria + (gf>=config.golosGoleada?config.bonusGoleada:0);
-    else { mini[game.home].pts+=config.pontosEmpate; mini[game.away].pts+=config.pontosEmpate; }
-  });
-  return cluster.slice().sort(function(a,b){
-    var ma=mini[a.idx], mb=mini[b.idx];
-    if(mb.pts!==ma.pts) return mb.pts-ma.pts;
-    var dgA=ma.gm-ma.gs, dgB=mb.gm-mb.gs;
-    if(dgB!==dgA) return dgB-dgA;
-    if(mb.gm!==ma.gm) return mb.gm-ma.gm;
-    if(a.GS!==b.GS) return a.GS-b.GS;
-    return a.name.localeCompare(b.name);
-  });
-}
+        var finalArr = []; var i = 0;
+        while (i < arr.length) {
+          var j = i + 1;
+          while (j < arr.length && arr[j].Pts === arr[i].Pts && arr[j].DG === arr[i].DG && arr[j].GM === arr[i].GM) j++;
+          var cluster = arr.slice(i, j);
+          if (cluster.length > 1) cluster = resolveHeadToHead(cluster, schedule, results, config);
+          finalArr = finalArr.concat(cluster);
+          i = j;
+        }
+        return finalArr;
+      }
 
-/* =========================================================
-   STATE
-========================================================= */
-var state = {
-  config:null, teams:null,
-  schedule:[], roundsMeta:[], scheduleTeamCount:0, scheduleVoltas:0,
-  results:{}
-};
+      function resolveHeadToHead(cluster, schedule, results, config) {
+        var ids = {}; cluster.forEach(function (c) { ids[c.idx] = true; });
+        var mini = {}; cluster.forEach(function (c) { mini[c.idx] = { pts: 0, gm: 0, gs: 0 }; });
+        schedule.forEach(function (game, gi) {
+          var res = results[gi];
+          if (!res) return;
+          if (!ids[game.home] || !ids[game.away]) return;
+          var m = /^(\d+)-(\d+)$/.exec(String(res).trim());
+          if (!m) return;
+          var gc = parseInt(m[1], 10), gf = parseInt(m[2], 10);
+          mini[game.home].gm += gc; mini[game.home].gs += gf;
+          mini[game.away].gm += gf; mini[game.away].gs += gc;
+          if (gc > gf) mini[game.home].pts += config.pontosVitoria + (gc >= config.golosGoleada ? config.bonusGoleada : 0);
+          else if (gc < gf) mini[game.away].pts += config.pontosVitoria + (gf >= config.golosGoleada ? config.bonusGoleada : 0);
+          else { mini[game.home].pts += config.pontosEmpate; mini[game.away].pts += config.pontosEmpate; }
+        });
+        return cluster.slice().sort(function (a, b) {
+          var ma = mini[a.idx], mb = mini[b.idx];
+          if (mb.pts !== ma.pts) return mb.pts - ma.pts;
+          var dgA = ma.gm - ma.gs, dgB = mb.gm - mb.gs;
+          if (dgB !== dgA) return dgB - dgA;
+          if (mb.gm !== ma.gm) return mb.gm - ma.gm;
+          if (a.GS !== b.GS) return a.GS - b.GS;
+          return a.name.localeCompare(b.name);
+        });
+      }
 
-/* =========================================================
-   STORAGE ABSTRACTION
-========================================================= */
-var memoryFallback={};
-var storageWarned=false;
-var noStorage = (typeof window.localStorage === 'undefined');
+      /* =========================================================
+         STATE
+      ========================================================= */
+      var state = {
+        config: null, teams: null,
+        schedule: [], roundsMeta: [], scheduleTeamCount: 0, scheduleVoltas: 0,
+        results: {}
+      };
 
-function warnNoStorage(){
-  if(storageWarned) return;
-  storageWarned=true;
-  showToast('O teu navegador bloqueia a gravação — os dados não serão guardados após o refresh.', 'error');
-}
-async function storageGet(key){
-  if(noStorage){ warnNoStorage(); return (key in memoryFallback)? {value:memoryFallback[key]} : null; }
-  try{ 
-    var result = window.localStorage.getItem('torneio_ilog_' + key);
-    return result !== null ? {value: result} : null;
-  }
-  catch(e){ return null; }
-}
-async function storageSet(key, value){
-  if(noStorage){ warnNoStorage(); memoryFallback[key]=value; return {value:value}; }
-  try{ 
-    window.localStorage.setItem('torneio_ilog_' + key, value);
-    return {value:value}; 
-  }
-  catch(e){ flashError(); return null; }
-}
+      /* =========================================================
+         STORAGE ABSTRACTION
+      ========================================================= */
+      var memoryFallback = {};
+      var storageWarned = false;
+      var noStorage = (typeof window.localStorage === 'undefined');
 
-/* =========================================================
-   DEFAULTS
-========================================================= */
-function defaultConfig(){
-  return {nome:'Torneio 2026', numEquipas:8, numVoltas:2,
-          pontosVitoria:3, pontosEmpate:1, pontosDerrota:0,
-          bonusGoleada:1, golosGoleada:3};
-}
-function defaultTeams(){
-  var arr=[];
-  for(var i=0;i<32;i++) arr.push(i<8 ? ('Equipa '+(i+1)) : '');
-  return arr;
-}
-function ensureTeamsLength(arr){
-  var out=(arr||[]).slice(0,32);
-  while(out.length<32) out.push('');
-  return out;
-}
+      function warnNoStorage() {
+        if (storageWarned) return;
+        storageWarned = true;
+        showToast('O teu navegador bloqueia a gravação — os dados não serão guardados após o refresh.', 'error');
+      }
 
-/* =========================================================
-   SNAPSHOT — build / validate / apply
-   -------------------------------------------------------
-   buildSnapshot()   → returns the full state object
-   applySnapshot(s)  → restores state from a snapshot object
-   validateSnapshot  → returns true if object looks valid
-========================================================= */
-function buildSnapshot(){
-  return {
-    version      : SNAPSHOT_VERSION,
-    exportedAt   : new Date().toISOString(),
-    config       : JSON.parse(JSON.stringify(state.config)),
-    teams        : state.teams.slice(),
-    schedule     : state.schedule.slice(),
-    roundsMeta   : state.roundsMeta.slice(),
-    scheduleTeamCount : state.scheduleTeamCount,
-    scheduleVoltas    : state.scheduleVoltas,
-    results      : JSON.parse(JSON.stringify(state.results))
-  };
-}
+      async function storageGet(key) {
+        if (noStorage) { warnNoStorage(); return (key in memoryFallback) ? { value: memoryFallback[key] } : null; }
+        try {
+          var result = window.localStorage.getItem('torneio_ilog_' + key);
+          return result !== null ? { value: result } : null;
+        }
+        catch (e) { return null; }
+      }
 
-function validateSnapshot(s){
-  if(!s || typeof s !== 'object') return false;
-  if(typeof s.version !== 'number') return false;
-  if(!s.config || !Array.isArray(s.teams) || !Array.isArray(s.schedule)) return false;
-  if(!s.results || typeof s.results !== 'object') return false;
-  return true;
-}
+      async function storageSet(key, value) {
+        if (noStorage) { warnNoStorage(); memoryFallback[key] = value; return { value: value }; }
+        try {
+          window.localStorage.setItem('torneio_ilog_' + key, value);
+          return { value: value };
+        }
+        catch (e) { flashError(); return null; }
+      }
 
-function applySnapshot(s){
-  state.config            = Object.assign(defaultConfig(), s.config);
-  state.teams             = ensureTeamsLength(s.teams);
-  state.schedule          = s.schedule || [];
-  state.roundsMeta        = s.roundsMeta || [];
-  state.scheduleTeamCount = s.scheduleTeamCount || state.config.numEquipas;
-  state.scheduleVoltas    = s.scheduleVoltas    || state.config.numVoltas;
-  state.results           = s.results || {};
-}
+      /* =========================================================
+         DEFAULTS
+      ========================================================= */
+      function defaultConfig() {
+        return {
+          nome: 'Torneio 2026', numEquipas: 8, numVoltas: 2,
+          pontosVitoria: 3, pontosEmpate: 1, pontosDerrota: 0,
+          bonusGoleada: 1, golosGoleada: 3
+        };
+      }
+      function defaultTeams() {
+        var arr = [];
+        for (var i = 0; i < 32; i++) arr.push(i < 8 ? ('Equipa ' + (i + 1)) : '');
+        return arr;
+      }
+      function ensureTeamsLength(arr) {
+        var out = (arr || []).slice(0, 32);
+        while (out.length < 32) out.push('');
+        return out;
+      }
 
-/* =========================================================
-   PERSISTENCE
-   -------------------------------------------------------
-   Every persist* call also triggers persistBackup() so the
-   'backup' key in storage is always in sync with the latest
-   full state.
-========================================================= */
-async function persistBackup(){
-  var snap = buildSnapshot();
-  await storageSet('backup', JSON.stringify(snap));
-  flashBackup(snap.exportedAt);
-}
+      /* =========================================================
+         SNAPSHOT — build / validate / apply
+         -------------------------------------------------------
+         buildSnapshot()   → returns the full state object
+         applySnapshot(s)  → restores state from a snapshot object
+         validateSnapshot  → returns true if object looks valid
+      ========================================================= */
+      function buildSnapshot() {
+        return {
+          version: SNAPSHOT_VERSION,
+          exportedAt: new Date().toISOString(),
+          config: JSON.parse(JSON.stringify(state.config)),
+          teams: state.teams.slice(),
+          schedule: state.schedule.slice(),
+          roundsMeta: state.roundsMeta.slice(),
+          scheduleTeamCount: state.scheduleTeamCount,
+          scheduleVoltas: state.scheduleVoltas,
+          results: JSON.parse(JSON.stringify(state.results))
+        };
+      }
 
-async function persistConfigTeams(){
-  await storageSet('config-teams', JSON.stringify({config:state.config, teams:state.teams}));
-  flashSaved();
-  await persistBackup();
-}
-async function persistSchedule(){
-  await storageSet('schedule', JSON.stringify({
-    schedule:state.schedule, roundsMeta:state.roundsMeta,
-    scheduleTeamCount:state.scheduleTeamCount, scheduleVoltas:state.scheduleVoltas
-  }));
-  flashSaved();
-  await persistBackup();
-}
-async function persistResults(){
-  await storageSet('results', JSON.stringify(state.results));
-  flashSaved();
-  await persistBackup();
-}
+      function validateSnapshot(s) {
+        if (!s || typeof s !== 'object') return false;
+        if (typeof s.version !== 'number') return false;
+        if (!s.config || !Array.isArray(s.teams) || !Array.isArray(s.schedule)) return false;
+        if (!s.results || typeof s.results !== 'object') return false;
+        return true;
+      }
 
-function applyGeneratedSchedule(numEquipas, numVoltas){
-  var out = generateSchedule(numEquipas, numVoltas);
-  state.schedule          = out.schedule;
-  state.roundsMeta        = out.roundsMeta;
-  state.scheduleTeamCount = numEquipas;
-  state.scheduleVoltas    = numVoltas;
-}
+      function applySnapshot(s) {
+        state.config = Object.assign(defaultConfig(), s.config);
+        state.teams = ensureTeamsLength(s.teams);
+        state.schedule = s.schedule || [];
+        state.roundsMeta = s.roundsMeta || [];
+        state.scheduleTeamCount = s.scheduleTeamCount || state.config.numEquipas;
+        state.scheduleVoltas = s.scheduleVoltas || state.config.numVoltas;
+        state.results = s.results || {};
+      }
 
-/* =========================================================
-   LOAD STATE
-   -------------------------------------------------------
-   Priority order:
-     1. Individual storage keys (config-teams, schedule, results)
-     2. If none found → try to restore from 'backup' key
-     3. If still nothing → create fresh defaults
-========================================================= */
-async function loadState(){
-  var ct=null, sc=null, rs=null, bk=null;
-  try{ var r1=await storageGet('config-teams'); ct = r1 ? JSON.parse(r1.value) : null; }catch(e){ ct=null; }
-  try{ var r2=await storageGet('schedule');     sc = r2 ? JSON.parse(r2.value) : null; }catch(e){ sc=null; }
-  try{ var r3=await storageGet('results');      rs = r3 ? JSON.parse(r3.value) : null; }catch(e){ rs=null; }
-  try{ var r4=await storageGet('backup');       bk = r4 ? JSON.parse(r4.value) : null; }catch(e){ bk=null; }
+      /* =========================================================
+         PERSISTENCE
+         -------------------------------------------------------
+         Every persist* call also triggers persistBackup() so the
+         'backup' key in storage is always in sync with the latest
+         full state.
+      ========================================================= */
+      async function persistBackup() {
+        var snap = buildSnapshot();
+        await storageSet('backup', JSON.stringify(snap));
+        flashBackup(snap.exportedAt);
+      }
 
-  var hasIndividualData = ct && ct.config && ct.teams;
-
-  if(hasIndividualData){
-    /* Normal load from individual keys */
-    state.config = Object.assign(defaultConfig(), ct.config);
-    state.teams  = ensureTeamsLength(ct.teams);
-
-    if(sc && sc.schedule && sc.schedule.length){
-      state.schedule          = sc.schedule;
-      state.roundsMeta        = sc.roundsMeta || [];
-      state.scheduleTeamCount = sc.scheduleTeamCount || state.config.numEquipas;
-      state.scheduleVoltas    = sc.scheduleVoltas    || state.config.numVoltas;
-    } else {
-      applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas);
-      await persistSchedule();
-    }
-    state.results = rs || {};
-
-  } else if(validateSnapshot(bk)){
-    /* Restore from backup snapshot */
-    applySnapshot(bk);
-    /* Re-write individual keys so next load is normal */
-    await storageSet('config-teams', JSON.stringify({config:state.config, teams:state.teams}));
-    await storageSet('schedule', JSON.stringify({
-      schedule:state.schedule, roundsMeta:state.roundsMeta,
-      scheduleTeamCount:state.scheduleTeamCount, scheduleVoltas:state.scheduleVoltas
-    }));
-    await storageSet('results', JSON.stringify(state.results));
-    showToast('Estado restaurado a partir do backup automático.', 'ok');
-    flashBackup(bk.exportedAt);
-
-  } else {
-    /* Fresh start */
-    state.config  = defaultConfig();
-    state.teams   = defaultTeams();
-    applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas);
-    await persistConfigTeams();
-    await persistSchedule();
-    await persistResults();
-  }
-
-  /* Show backup pill timestamp if backup exists */
-  if(bk && bk.exportedAt) flashBackup(bk.exportedAt);
-}
-
-/* =========================================================
-   EXPORT / IMPORT
-========================================================= */
-function exportJSON(){
-  var snap     = buildSnapshot();
-  var json     = JSON.stringify(snap, null, 2);
-  var blob     = new Blob([json], {type:'application/json'});
-  var url      = URL.createObjectURL(blob);
-  var safeName = (state.config.nome || 'torneio')
-                   .replace(/[^a-z0-9_\-]/gi,'_')
-                   .toLowerCase();
-  var ts       = new Date().toISOString().slice(0,16).replace(/[:T]/g,'-');
-  var a        = document.createElement('a');
-  a.href       = url;
-  a.download   = safeName + '_' + ts + '.json';
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
-  showToast('Torneio exportado com sucesso!', 'ok');
-}
-
-function importJSON(file){
-  if(!file) return;
-  var reader = new FileReader();
-  reader.onload = function(e){
-    var snap;
-    try{ snap = JSON.parse(e.target.result); }
-    catch(err){
-      showToast('Ficheiro inválido — não é um JSON válido.', 'error');
-      return;
-    }
-    if(!validateSnapshot(snap)){
-      showToast('Ficheiro não reconhecido — estrutura inválida.', 'error');
-      return;
-    }
-    openConfirm(
-      'Importar torneio',
-      'Isto vai substituir TODO o estado atual (configuração, equipas, calendário e resultados) pelo conteúdo do ficheiro. Continuar?',
-      async function(){
-        applySnapshot(snap);
-        /* Persist all keys + backup */
-        await storageSet('config-teams', JSON.stringify({config:state.config, teams:state.teams}));
-        await storageSet('schedule', JSON.stringify({
-          schedule:state.schedule, roundsMeta:state.roundsMeta,
-          scheduleTeamCount:state.scheduleTeamCount, scheduleVoltas:state.scheduleVoltas
-        }));
-        await storageSet('results', JSON.stringify(state.results));
+      async function persistConfigTeams() {
+        await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams }));
+        flashSaved();
         await persistBackup();
-        renderAll();
-        showToast('Torneio importado com sucesso!', 'ok');
       }
-    );
-  };
-  reader.readAsText(file);
-}
+      async function persistSchedule() {
+        await storageSet('schedule', JSON.stringify({
+          schedule: state.schedule, roundsMeta: state.roundsMeta,
+          scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas
+        }));
+        flashSaved();
+        await persistBackup();
+      }
+      async function persistResults() {
+        await storageSet('results', JSON.stringify(state.results));
+        flashSaved();
+        await persistBackup();
+      }
 
-/* =========================================================
-   HELPERS
-========================================================= */
-function getTeamName(idx){
-  var raw = (state.teams[idx]||'').trim();
-  return raw || ('Equipa '+(idx+1));
-}
-function getActiveTeamNames(){
-  var arr=[];
-  for(var i=0;i<state.scheduleTeamCount;i++) arr.push(getTeamName(i));
-  return arr;
-}
-function clamp(n,min,max){ return Math.min(max,Math.max(min,n)); }
-function numOr(v, fallback){ var n=parseFloat(v); return isFinite(n)? n : fallback; }
-function escapeHtml(s){
-  return String(s).replace(/[&<>"']/g, function(c){
-    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
-  });
-}
-function fmtTimestamp(iso){
-  try{
-    var d = new Date(iso);
-    return d.toLocaleDateString('pt-PT',{day:'2-digit',month:'2-digit'})
-           + ' '
-           + d.toLocaleTimeString('pt-PT',{hour:'2-digit',minute:'2-digit'});
-  }catch(e){ return iso; }
-}
+      function applyGeneratedSchedule(numEquipas, numVoltas) {
+        var out = generateSchedule(numEquipas, numVoltas);
+        state.schedule = out.schedule;
+        state.roundsMeta = out.roundsMeta;
+        state.scheduleTeamCount = numEquipas;
+        state.scheduleVoltas = numVoltas;
+      }
 
-function computeStatsSummary(){
-  var teams    = getActiveTeamNames();
-  var standings= computeStandings(teams, state.schedule, state.results, state.config);
-  var total    = state.schedule.length;
-  var playedKeys = Object.keys(state.results).filter(function(k){
-    return /^\d+-\d+$/.test(String(state.results[k]||'').trim());
-  });
-  var played     = playedKeys.length;
-  var totalGoals = standings.reduce(function(s,t){ return s+t.GM; }, 0);
-  var media      = played>0 ? totalGoals/played : 0;
-  var withGames  = standings.filter(function(s){ return s.J>0; });
+      /* =========================================================
+         LOAD STATE
+         -------------------------------------------------------
+         Priority order:
+           1. Individual storage keys (config-teams, schedule, results)
+           2. If none found → try to restore from 'backup' key
+           3. If still nothing → create fresh defaults
+      ========================================================= */
+      async function loadState() {
+        var ct = null, sc = null, rs = null, bk = null;
+        try { var r1 = await storageGet('config-teams'); ct = r1 ? JSON.parse(r1.value) : null; } catch (e) { ct = null; }
+        try { var r2 = await storageGet('schedule'); sc = r2 ? JSON.parse(r2.value) : null; } catch (e) { sc = null; }
+        try { var r3 = await storageGet('results'); rs = r3 ? JSON.parse(r3.value) : null; } catch (e) { rs = null; }
+        try { var r4 = await storageGet('backup'); bk = r4 ? JSON.parse(r4.value) : null; } catch (e) { bk = null; }
 
-  function pick(arr, better){
-    if(!arr.length) return null;
-    return arr.reduce(function(a,b){ return better(b,a)? b : a; });
-  }
-  var bestAtk   = pick(withGames, function(b,a){ return b.GM>a.GM; });
-  var bestDef   = pick(withGames, function(b,a){ return b.GS<a.GS; });
-  var mostWins  = pick(withGames, function(b,a){ return b.V>a.V; });
-  var mostDraws = pick(withGames, function(b,a){ return b.E>a.E; });
+        var hasIndividualData = ct && ct.config && ct.teams;
 
-  var biggestWin=null;
-  state.schedule.forEach(function(g,gi){
-    var res=state.results[gi];
-    if(!res) return;
-    var m=/^(\d+)-(\d+)$/.exec(String(res).trim());
-    if(!m) return;
-    var gc=+m[1], gf=+m[2], diff=Math.abs(gc-gf);
-    if(!biggestWin || diff>biggestWin.diff){
-      biggestWin={diff:diff, text:getTeamName(g.home)+' '+res+' '+getTeamName(g.away)};
-    }
-  });
+        if (hasIndividualData) {
+          /* Normal load from individual keys */
+          state.config = Object.assign(defaultConfig(), ct.config);
+          state.teams = ensureTeamsLength(ct.teams);
 
-  var roundPlayed={};
-  state.schedule.forEach(function(g,gi){
-    roundPlayed[g.jornada]=roundPlayed[g.jornada]||{played:0,total:0};
-    roundPlayed[g.jornada].total++;
-    if(state.results[gi]) roundPlayed[g.jornada].played++;
-  });
-  var currentRound = state.roundsMeta.length ? state.roundsMeta[state.roundsMeta.length-1].jornada : 0;
-  for(var ri=0; ri<state.roundsMeta.length; ri++){
-    var rm=state.roundsMeta[ri];
-    var rp=roundPlayed[rm.jornada]||{played:0,total:0};
-    if(rp.played<rp.total){ currentRound=rm.jornada; break; }
-  }
+          if (sc && sc.schedule && sc.schedule.length) {
+            state.schedule = sc.schedule;
+            state.roundsMeta = sc.roundsMeta || [];
+            state.scheduleTeamCount = sc.scheduleTeamCount || state.config.numEquipas;
+            state.scheduleVoltas = sc.scheduleVoltas || state.config.numVoltas;
+          } else {
+            applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas);
+            await persistSchedule();
+          }
+          state.results = rs || {};
 
-  return {
-    standings:standings, total:total, played:played, pendentes:total-played,
-    totalGoals:totalGoals, media:media,
-    bestAtkLabel : bestAtk  ? (bestAtk.name +' — '+bestAtk.GM +' golos')    : '—',
-    bestDefLabel : bestDef  ? (bestDef.name +' — '+bestDef.GS +' sofridos') : '—',
-    mostWinsLabel: mostWins ? (mostWins.name+' — '+mostWins.V +' vitórias') : '—',
-    mostDrawsLabel:mostDraws? (mostDraws.name+' — '+mostDraws.E+' empates') : '—',
-    biggestWinLabel: biggestWin? (biggestWin.text+'  (dif. '+biggestWin.diff+')') : '—',
-    totalRounds: state.roundsMeta.length, currentRound: currentRound
-  };
-}
+        } else if (validateSnapshot(bk)) {
+          /* Restore from backup snapshot */
+          applySnapshot(bk);
+          /* Re-write individual keys so next load is normal */
+          await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams }));
+          await storageSet('schedule', JSON.stringify({
+            schedule: state.schedule, roundsMeta: state.roundsMeta,
+            scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas
+          }));
+          await storageSet('results', JSON.stringify(state.results));
+          showToast('Estado restaurado a partir do backup automático.', 'ok');
+          flashBackup(bk.exportedAt);
 
-/* =========================================================
-   DOM CACHE
-========================================================= */
-var dom={};
-function cacheDom(){
-  ['tournamentTitle','savePill','backupPill','marqueeTicker',
-   'btnGerarCalendario','btnNovoTorneio','btnAtualizar','btnExportar','btnImportar','inputImportar',
-   'dashboardPodium','dashboardStandings','dashboardStats',
-   'cfgNome','cfgNumEquipas','cfgNumVoltas','cfgVitoria','cfgEmpate','cfgDerrota','cfgBonus','cfgGoleada','scheduleHint',
-   'teamsList','calendarList','resultsList','standingsBody','statsGrid',
-   'modalOverlay','modalTitle','modalBody','modalCancel','modalConfirm','toastRoot'
-  ].forEach(function(id){ dom[id]=document.getElementById(id); });
-  dom.tabs   = Array.prototype.slice.call(document.querySelectorAll('.tab'));
-  dom.panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
-}
+        } else {
+          /* Fresh start */
+          state.config = defaultConfig();
+          state.teams = defaultTeams();
+          applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas);
+          await persistConfigTeams();
+          await persistSchedule();
+          await persistResults();
+        }
 
-/* =========================================================
-   RENDER
-========================================================= */
-function renderAll(){
-  populateConfigForm();
-  renderTeams();
-  renderCalendar();
-  renderResults();
-  refreshComputed();
-}
+        /* Show backup pill timestamp if backup exists */
+        if (bk && bk.exportedAt) flashBackup(bk.exportedAt);
+      }
 
-function refreshComputed(){
-  var summary = computeStatsSummary();
-  renderStandingsBody(summary.standings);
-  renderStatsGrid(summary);
-  renderDashboard(summary);
-  updateTicker(summary);
-  renderScheduleHint();
-}
+      /* =========================================================
+         EXPORT / IMPORT
+      ========================================================= */
+      function exportJSON() {
+        var snap = buildSnapshot();
+        var json = JSON.stringify(snap, null, 2);
+        var blob = new Blob([json], { type: 'application/json' });
+        var url = URL.createObjectURL(blob);
+        var safeName = (state.config.nome || 'torneio')
+          .replace(/[^a-z0-9_\-]/gi, '_')
+          .toLowerCase();
+        var ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+        var a = document.createElement('a');
+        a.href = url;
+        a.download = safeName + '_' + ts + '.json';
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+        showToast('Torneio exportado com sucesso!', 'ok');
+      }
 
-function populateConfigForm(){
-  dom.cfgNome.value      = state.config.nome;
-  dom.cfgNumEquipas.value= state.config.numEquipas;
-  dom.cfgNumVoltas.value = state.config.numVoltas;
-  dom.cfgVitoria.value   = state.config.pontosVitoria;
-  dom.cfgEmpate.value    = state.config.pontosEmpate;
-  dom.cfgDerrota.value   = state.config.pontosDerrota;
-  dom.cfgBonus.value     = state.config.bonusGoleada;
-  dom.cfgGoleada.value   = state.config.golosGoleada;
-}
+      function importJSON(file) {
+        if (!file) return;
+        var reader = new FileReader();
+        reader.onload = function (e) {
+          var snap;
+          try { snap = JSON.parse(e.target.result); }
+          catch (err) {
+            showToast('Ficheiro inválido — não é um JSON válido.', 'error');
+            return;
+          }
+          if (!validateSnapshot(snap)) {
+            showToast('Ficheiro não reconhecido — estrutura inválida.', 'error');
+            return;
+          }
+          openConfirm(
+            'Importar torneio',
+            'Isto vai substituir TODO o estado atual (configuração, equipas, calendário e resultados) pelo conteúdo do ficheiro. Continuar?',
+            async function () {
+              applySnapshot(snap);
+              /* Persist all keys + backup */
+              await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams }));
+              await storageSet('schedule', JSON.stringify({
+                schedule: state.schedule, roundsMeta: state.roundsMeta,
+                scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas
+              }));
+              await storageSet('results', JSON.stringify(state.results));
+              await persistBackup();
+              renderAll();
+              showToast('Torneio importado com sucesso!', 'ok');
+            }
+          );
+        };
+        reader.readAsText(file);
+      }
 
-function renderScheduleHint(){
-  var confN=clamp(parseInt(dom.cfgNumEquipas.value,10)||state.config.numEquipas,2,32);
-  var confV=clamp(parseInt(dom.cfgNumVoltas.value,10)||state.config.numVoltas,1,20);
-  var live = 'Calendário atual: <strong>'+state.scheduleTeamCount+' equipas / '+state.scheduleVoltas+' volta(s)</strong> · '+state.schedule.length+' jogos.';
-  if(confN!==state.scheduleTeamCount || confV!==state.scheduleVoltas){
-    live += ' Configurado agora: '+confN+' equipas / '+confV+' volta(s) — clica em 🔄 Gerar Calendário para aplicar.';
-  }
-  dom.scheduleHint.innerHTML = live;
-}
+      /* =========================================================
+         HELPERS
+      ========================================================= */
+      function getTeamName(idx) {
+        var raw = (state.teams[idx] || '').trim();
+        return raw || ('Equipa ' + (idx + 1));
+      }
+      function getActiveTeamNames() {
+        var arr = [];
+        for (var i = 0; i < state.scheduleTeamCount; i++) arr.push(getTeamName(i));
+        return arr;
+      }
+      function clamp(n, min, max) { return Math.min(max, Math.max(min, n)); }
+      function numOr(v, fallback) { var n = parseFloat(v); return isFinite(n) ? n : fallback; }
+      function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, function (c) {
+          return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+        });
+      }
+      function fmtTimestamp(iso) {
+        try {
+          var d = new Date(iso);
+          return d.toLocaleDateString('pt-PT', { day: '2-digit', month: '2-digit' })
+            + ' '
+            + d.toLocaleTimeString('pt-PT', { hour: '2-digit', minute: '2-digit' });
+        } catch (e) { return iso; }
+      }
 
-function renderTeams(){
-  var html=[];
-  for(var i=0;i<32;i++){
-    var active = i < state.scheduleTeamCount;
-    html.push(
-      '<div class="team-row'+(active?'':' team-row-inactive')+'">'+
-        '<span class="team-num">'+(i+1)+'</span>'+
-        '<input type="text" class="input team-input" data-idx="'+i+'" value="'+escapeHtml(state.teams[i]||'')+'" placeholder="Equipa '+(i+1)+'">'+
-        (active? '' : '<span class="team-tag">fora do calendário atual</span>')+
-      '</div>'
-    );
-  }
-  dom.teamsList.innerHTML = html.join('');
-  Array.prototype.forEach.call(dom.teamsList.querySelectorAll('.team-input'), function(inp){
-    inp.addEventListener('blur', onTeamNameChange);
-    inp.addEventListener('keydown', function(e){ if(e.key==='Enter') inp.blur(); });
-  });
-}
+      function computeStatsSummary() {
+        var teams = getActiveTeamNames();
+        var standings = computeStandings(teams, state.schedule, state.results, state.config);
+        var total = state.schedule.length;
+        var playedKeys = Object.keys(state.results).filter(function (k) {
+          return /^\d+-\d+$/.test(String(state.results[k] || '').trim());
+        });
+        var played = playedKeys.length;
+        var totalGoals = standings.reduce(function (s, t) { return s + t.GM; }, 0);
+        var media = played > 0 ? totalGoals / played : 0;
+        var withGames = standings.filter(function (s) { return s.J > 0; });
 
-function renderCalendar(){
-  if(!state.schedule.length){
-    dom.calendarList.innerHTML='<p class="empty">Ainda não há calendário. Vai a Configuração e clica em 🔄 Gerar Calendário.</p>';
-    return;
-  }
-  var byRound={};
-  state.schedule.forEach(function(g){ (byRound[g.jornada]=byRound[g.jornada]||[]).push(g); });
-  var byeMap={};
-  state.roundsMeta.forEach(function(r){ if(r.bye!==null && r.bye!==undefined) byeMap[r.jornada]=r.bye; });
+        function pick(arr, better) {
+          if (!arr.length) return null;
+          return arr.reduce(function (a, b) { return better(b, a) ? b : a; });
+        }
+        var bestAtk = pick(withGames, function (b, a) { return b.GM > a.GM; });
+        var bestDef = pick(withGames, function (b, a) { return b.GS < a.GS; });
+        var mostWins = pick(withGames, function (b, a) { return b.V > a.V; });
+        var mostDraws = pick(withGames, function (b, a) { return b.E > a.E; });
 
-  var parts=[];
-  state.roundsMeta.forEach(function(rm){
-    var j=rm.jornada;
-    var games=byRound[j]||[];
-    parts.push('<div class="round-card"><div class="round-head">Jornada '+j+'</div><div class="round-games">');
-    games.forEach(function(g){
-      parts.push('<div class="fixture"><span class="fx-home">'+escapeHtml(getTeamName(g.home))+'</span><span class="fx-vs">VS</span><span class="fx-away">'+escapeHtml(getTeamName(g.away))+'</span></div>');
-    });
-    if(byeMap[j]!==undefined){
-      parts.push('<div class="fixture fixture-bye">💤 '+escapeHtml(getTeamName(byeMap[j]))+' — folga esta jornada</div>');
-    }
-    parts.push('</div></div>');
-  });
-  dom.calendarList.innerHTML = parts.join('');
-}
+        var biggestWin = null;
+        state.schedule.forEach(function (g, gi) {
+          var res = state.results[gi];
+          if (!res) return;
+          var m = /^(\d+)-(\d+)$/.exec(String(res).trim());
+          if (!m) return;
+          var gc = +m[1], gf = +m[2], diff = Math.abs(gc - gf);
+          if (!biggestWin || diff > biggestWin.diff) {
+            biggestWin = { diff: diff, text: getTeamName(g.home) + ' ' + res + ' ' + getTeamName(g.away) };
+          }
+        });
 
-function renderResults(){
-  if(!state.schedule.length){
-    dom.resultsList.innerHTML='<p class="empty">Sem jogos agendados.</p>';
-    return;
-  }
-  var byRound={};
-  state.schedule.forEach(function(g,gi){ (byRound[g.jornada]=byRound[g.jornada]||[]).push({g:g,gi:gi}); });
+        var roundPlayed = {};
+        state.schedule.forEach(function (g, gi) {
+          roundPlayed[g.jornada] = roundPlayed[g.jornada] || { played: 0, total: 0 };
+          roundPlayed[g.jornada].total++;
+          if (state.results[gi]) roundPlayed[g.jornada].played++;
+        });
+        var currentRound = state.roundsMeta.length ? state.roundsMeta[state.roundsMeta.length - 1].jornada : 0;
+        for (var ri = 0; ri < state.roundsMeta.length; ri++) {
+          var rm = state.roundsMeta[ri];
+          var rp = roundPlayed[rm.jornada] || { played: 0, total: 0 };
+          if (rp.played < rp.total) { currentRound = rm.jornada; break; }
+        }
 
-  var parts=[];
-  state.roundsMeta.forEach(function(rm){
-    var j=rm.jornada;
-    var games=byRound[j]||[];
-    if(!games.length) return;
-    parts.push('<div class="round-card"><div class="round-head">Jornada '+j+'</div><div class="round-games">');
-    games.forEach(function(item){
-      var g=item.g, gi=item.gi;
-      var val=state.results[gi]||'';
-      parts.push(
-        '<div class="fixture fixture-input">'+
-          '<span class="fx-home">'+escapeHtml(getTeamName(g.home))+'</span>'+
-          '<input type="text" class="input result-input" data-gi="'+gi+'" value="'+escapeHtml(val)+'" placeholder="0-0" inputmode="numeric" maxlength="7">'+
-          '<span class="fx-away">'+escapeHtml(getTeamName(g.away))+'</span>'+
-        '</div>'
-      );
-    });
-    parts.push('</div></div>');
-  });
-  dom.resultsList.innerHTML = parts.join('');
-  Array.prototype.forEach.call(dom.resultsList.querySelectorAll('.result-input'), function(inp){
-    inp.addEventListener('input', onResultInput);
-    inp.addEventListener('blur', onResultCommit);
-    inp.addEventListener('keydown', function(e){ if(e.key==='Enter') inp.blur(); });
-  });
-}
+        return {
+          standings: standings, total: total, played: played, pendentes: total - played,
+          totalGoals: totalGoals, media: media,
+          bestAtkLabel: bestAtk ? (bestAtk.name + ' — ' + bestAtk.GM + ' golos') : '—',
+          bestDefLabel: bestDef ? (bestDef.name + ' — ' + bestDef.GS + ' sofridos') : '—',
+          mostWinsLabel: mostWins ? (mostWins.name + ' — ' + mostWins.V + ' vitórias') : '—',
+          mostDrawsLabel: mostDraws ? (mostDraws.name + ' — ' + mostDraws.E + ' empates') : '—',
+          biggestWinLabel: biggestWin ? (biggestWin.text + '  (dif. ' + biggestWin.diff + ')') : '—',
+          totalRounds: state.roundsMeta.length, currentRound: currentRound
+        };
+      }
 
-function renderStandingsBody(standings){
-  if(!standings.length){
-    dom.standingsBody.innerHTML='<tr><td colspan="10" class="empty">Sem equipas configuradas.</td></tr>';
-    return;
-  }
-  var rows = standings.map(function(s,i){
-    var cls = i===0?'pos-gold':i===1?'pos-silver':i===2?'pos-bronze':'';
-    var dgTxt = (s.DG>0?'+':'')+s.DG;
-    return '<tr class="'+cls+'">'+
-      '<td><span class="pos-badge">'+(i+1)+'</span></td>'+
-      '<td class="team-cell">'+escapeHtml(s.name)+'</td>'+
-      '<td class="num">'+s.J+'</td><td class="num">'+s.V+'</td><td class="num">'+s.E+'</td><td class="num">'+s.D+'</td>'+
-      '<td class="num">'+s.GM+'</td><td class="num">'+s.GS+'</td><td class="num">'+dgTxt+'</td>'+
-      '<td class="num pts-cell">'+s.Pts+'</td>'+
-    '</tr>';
-  });
-  dom.standingsBody.innerHTML = rows.join('');
-}
+      /* =========================================================
+         DOM CACHE
+      ========================================================= */
+      var dom = {};
+      function cacheDom() {
+        ['tournamentTitle', 'savePill', 'backupPill', 'marqueeTicker',
+          'btnGerarCalendario', 'btnNovoTorneio', 'btnAtualizar', 'btnExportar', 'btnImportar', 'inputImportar',
+          'dashboardPodium', 'dashboardStandings', 'dashboardStats',
+          'cfgNome', 'cfgNumEquipas', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
+          'teamsList', 'calendarList', 'resultsList', 'standingsBody', 'statsGrid',
+          'modalOverlay', 'modalTitle', 'modalBody', 'modalCancel', 'modalConfirm', 'toastRoot'
+        ].forEach(function (id) { dom[id] = document.getElementById(id); });
+        dom.tabs = Array.prototype.slice.call(document.querySelectorAll('.tab'));
+        dom.panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
+      }
 
-function statCardsHtml(summary){
-  var cards=[
-    ['Jogos realizados', summary.played+' / '+summary.total],
-    ['Jogos em falta', String(summary.pendentes)],
-    ['Golos marcados', String(summary.totalGoals)],
-    ['Média de golos / jogo', summary.media.toFixed(2)],
-    ['🔥 Melhor ataque', summary.bestAtkLabel],
-    ['🧱 Melhor defesa', summary.bestDefLabel],
-    ['Maior goleada', summary.biggestWinLabel],
-    ['Mais vitórias', summary.mostWinsLabel],
-    ['Mais empates', summary.mostDrawsLabel]
-  ];
-  return cards.map(function(c){
-    return '<div class="stat-card"><div class="stat-label">'+c[0]+'</div><div class="stat-value">'+escapeHtml(c[1])+'</div></div>';
-  }).join('');
-}
+      /* =========================================================
+         RENDER
+      ========================================================= */
+      function renderAll() {
+        populateConfigForm();
+        renderTeams();
+        renderCalendar();
+        renderResults();
+        refreshComputed();
+      }
 
-function renderStatsGrid(summary){ dom.statsGrid.innerHTML = statCardsHtml(summary); }
+      function refreshComputed() {
+        var summary = computeStatsSummary();
+        renderStandingsBody(summary.standings);
+        renderStatsGrid(summary);
+        renderDashboard(summary);
+        updateTicker(summary);
+        renderScheduleHint();
+      }
 
-function renderDashboard(summary){
-  dom.tournamentTitle.textContent = (state.config.nome || 'Torneio').toUpperCase();
-  var top3 = summary.standings.slice(0,3);
-  dom.dashboardPodium.innerHTML = top3.length ? top3.map(function(s,i){
-    return '<div class="podium-card podium-'+(i+1)+'">'+
-      '<div class="podium-rank">'+(i+1)+'º LUGAR</div>'+
-      '<div class="podium-name">'+escapeHtml(s.name)+'</div>'+
-      '<div class="podium-pts">'+s.Pts+' pts · '+s.J+' jogos</div>'+
-    '</div>';
-  }).join('') : '<p class="empty">Sem equipas configuradas.</p>';
+      function populateConfigForm() {
+        dom.cfgNome.value = state.config.nome;
+        dom.cfgNumEquipas.value = state.config.numEquipas;
+        dom.cfgNumVoltas.value = state.config.numVoltas;
+        dom.cfgVitoria.value = state.config.pontosVitoria;
+        dom.cfgEmpate.value = state.config.pontosEmpate;
+        dom.cfgDerrota.value = state.config.pontosDerrota;
+        dom.cfgBonus.value = state.config.bonusGoleada;
+        dom.cfgGoleada.value = state.config.golosGoleada;
+      }
 
-  var rest = summary.standings.slice(3,8);
-  if(rest.length){
-    dom.dashboardStandings.innerHTML =
-      '<table class="mini-table"><thead><tr><th>Pos</th><th style="text-align:left;">Equipa</th><th>J</th><th>Pts</th></tr></thead><tbody>'+
-      rest.map(function(s,i){ return '<tr><td class="num">'+(i+4)+'</td><td>'+escapeHtml(s.name)+'</td><td class="num">'+s.J+'</td><td class="num">'+s.Pts+'</td></tr>'; }).join('')+
-      '</tbody></table>';
-  } else {
-    dom.dashboardStandings.innerHTML='';
-  }
-  dom.dashboardStats.innerHTML = statCardsHtml(summary);
-}
+      function renderScheduleHint() {
+        var confN = clamp(parseInt(dom.cfgNumEquipas.value, 10) || state.config.numEquipas, 2, 32);
+        var confV = clamp(parseInt(dom.cfgNumVoltas.value, 10) || state.config.numVoltas, 1, 20);
+        var live = 'Calendário atual: <strong>' + state.scheduleTeamCount + ' equipas / ' + state.scheduleVoltas + ' volta(s)</strong> · ' + state.schedule.length + ' jogos.';
+        if (confN !== state.scheduleTeamCount || confV !== state.scheduleVoltas) {
+          live += ' Configurado agora: ' + confN + ' equipas / ' + confV + ' volta(s) — clica em 🔄 Gerar Calendário para aplicar.';
+        }
+        dom.scheduleHint.innerHTML = live;
+      }
 
-function updateTicker(summary){
-  if(!summary.totalRounds){ dom.marqueeTicker.textContent='SEM CALENDÁRIO'; return; }
-  dom.marqueeTicker.textContent = 'JORNADA '+summary.currentRound+' / '+summary.totalRounds+'   ·   '+summary.played+'/'+summary.total+' JOGOS DISPUTADOS';
-}
+      function renderTeams() {
+        var html = [];
+        for (var i = 0; i < 32; i++) {
+          var active = i < state.scheduleTeamCount;
+          html.push(
+            '<div class="team-row' + (active ? '' : ' team-row-inactive') + '">' +
+            '<span class="team-num">' + (i + 1) + '</span>' +
+            '<input type="text" class="input team-input" data-idx="' + i + '" value="' + escapeHtml(state.teams[i] || '') + '" placeholder="Equipa ' + (i + 1) + '">' +
+            (active ? '' : '<span class="team-tag">fora do calendário atual</span>') +
+            '</div>'
+          );
+        }
+        dom.teamsList.innerHTML = html.join('');
+        Array.prototype.forEach.call(dom.teamsList.querySelectorAll('.team-input'), function (inp) {
+          inp.addEventListener('blur', onTeamNameChange);
+          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
+        });
+      }
 
-/* =========================================================
-   EVENT HANDLERS
-========================================================= */
-function onConfigFieldChange(){
-  state.config.nome          = dom.cfgNome.value.trim() || 'Torneio';
-  state.config.pontosVitoria = numOr(dom.cfgVitoria.value, 3);
-  state.config.pontosEmpate  = numOr(dom.cfgEmpate.value, 1);
-  state.config.pontosDerrota = numOr(dom.cfgDerrota.value, 0);
-  state.config.bonusGoleada  = numOr(dom.cfgBonus.value, 1);
-  state.config.golosGoleada  = numOr(dom.cfgGoleada.value, 3);
-  persistConfigTeams();
-  refreshComputed();
-}
-function onFormatFieldChange(){
-  var n = clamp(parseInt(dom.cfgNumEquipas.value,10)||state.config.numEquipas, 2, 32);
-  var v = clamp(parseInt(dom.cfgNumVoltas.value,10)||state.config.numVoltas, 1, 20);
-  dom.cfgNumEquipas.value=n; dom.cfgNumVoltas.value=v;
-  state.config.numEquipas=n; state.config.numVoltas=v;
-  persistConfigTeams();
-  renderScheduleHint();
-}
+      function renderCalendar() {
+        if (!state.schedule.length) {
+          dom.calendarList.innerHTML = '<p class="empty">Ainda não há calendário. Vai a Configuração e clica em 🔄 Gerar Calendário.</p>';
+          return;
+        }
+        var byRound = {};
+        state.schedule.forEach(function (g) { (byRound[g.jornada] = byRound[g.jornada] || []).push(g); });
+        var byeMap = {};
+        state.roundsMeta.forEach(function (r) { if (r.bye !== null && r.bye !== undefined) byeMap[r.jornada] = r.bye; });
 
-function onTeamNameChange(e){
-  var idx = parseInt(e.target.dataset.idx,10);
-  state.teams[idx] = e.target.value.trim();
-  persistConfigTeams();
-  renderCalendar(); renderResults(); refreshComputed();
-}
+        var parts = [];
+        state.roundsMeta.forEach(function (rm) {
+          var j = rm.jornada;
+          var games = byRound[j] || [];
+          parts.push('<div class="round-card"><div class="round-head">Jornada ' + j + '</div><div class="round-games">');
+          games.forEach(function (g) {
+            parts.push('<div class="fixture"><span class="fx-home">' + escapeHtml(getTeamName(g.home)) + '</span><span class="fx-vs">VS</span><span class="fx-away">' + escapeHtml(getTeamName(g.away)) + '</span></div>');
+          });
+          if (byeMap[j] !== undefined) {
+            parts.push('<div class="fixture fixture-bye">💤 ' + escapeHtml(getTeamName(byeMap[j])) + ' — folga esta jornada</div>');
+          }
+          parts.push('</div></div>');
+        });
+        dom.calendarList.innerHTML = parts.join('');
+      }
 
-var RESULT_RE = /^\d{1,2}-\d{1,2}$/;
-function onResultInput(e){
-  var v = e.target.value.trim();
-  var ok = v==='' || RESULT_RE.test(v);
-  e.target.classList.toggle('input-invalid', !ok);
-}
-function onResultCommit(e){
-  var gi = e.target.dataset.gi;
-  var v  = e.target.value.trim();
-  if(v!=='' && !RESULT_RE.test(v)){ e.target.classList.add('input-invalid'); return; }
-  e.target.classList.remove('input-invalid');
-  if(v==='') delete state.results[gi]; else state.results[gi]=v;
-  persistResults();
-  refreshComputed();
-}
+      function renderResults() {
+        if (!state.schedule.length) {
+          dom.resultsList.innerHTML = '<p class="empty">Sem jogos agendados.</p>';
+          return;
+        }
+        var byRound = {};
+        state.schedule.forEach(function (g, gi) { (byRound[g.jornada] = byRound[g.jornada] || []).push({ g: g, gi: gi }); });
 
-function onGerarCalendario(){
-  var n = clamp(parseInt(dom.cfgNumEquipas.value,10)||state.config.numEquipas, 2, 32);
-  var v = clamp(parseInt(dom.cfgNumVoltas.value,10)||state.config.numVoltas, 1, 20);
-  var hasResults = Object.keys(state.results).length>0;
-  var estimate   = bergerRounds(n).reduce(function(s,r){return s+r.pairs.length;},0) * v;
+        var parts = [];
+        state.roundsMeta.forEach(function (rm) {
+          var j = rm.jornada;
+          var games = byRound[j] || [];
+          if (!games.length) return;
+          parts.push('<div class="round-card"><div class="round-head">Jornada ' + j + '</div><div class="round-games">');
+          games.forEach(function (item) {
+            var g = item.g, gi = item.gi;
+            var val = state.results[gi] || '';
+            var vHome = '', vAway = '';
 
-  function doIt(){
-    state.config.numEquipas=n; state.config.numVoltas=v;
-    applyGeneratedSchedule(n, v);
-    state.results = {};
-    persistConfigTeams();
-    persistSchedule();
-    persistResults();
-    renderAll();
-    showToast('Calendário gerado: '+state.schedule.length+' jogos em '+state.roundsMeta.length+' jornadas.', 'ok');
-  }
+            if (val) {
+              var m = /^(\d+)-(\d+)$/.exec(val);
+              if (m) { vHome = m[1]; vAway = m[2]; }
+            }
 
-  var msgParts=[];
-  if(hasResults) msgParts.push('Isto substitui o calendário atual e apaga todos os resultados já introduzidos.');
-  if(estimate>1500) msgParts.push('Este calendário vai ter '+estimate+' jogos — é bastante grande.');
-  msgParts.push('As equipas e a configuração de pontuação mantêm-se.');
+            parts.push(
+              '<div class="fixture fixture-input">' +
+              '<span class="fx-home">' + escapeHtml(getTeamName(g.home)) + '</span>' +
+              '<div class="result-split">' +
+              '<input type="number" class="input res-box" data-gi="' + gi + '" data-side="home" value="' + escapeHtml(vHome) + '" min="0" max="99" inputmode="numeric">' +
+              '<span class="res-sep">-</span>' +
+              '<input type="number" class="input res-box" data-gi="' + gi + '" data-side="away" value="' + escapeHtml(vAway) + '" min="0" max="99" inputmode="numeric">' +
+              '</div>' +
+              '<span class="fx-away">' + escapeHtml(getTeamName(g.away)) + '</span>' +
+              '</div>'
+            );
+          });
+          parts.push('</div></div>');
+        });
+        dom.resultsList.innerHTML = parts.join('');
 
-  if(hasResults || estimate>1500){
-    openConfirm('Gerar novo calendário', msgParts.join(' '), doIt);
-  } else {
-    doIt();
-  }
-}
+        Array.prototype.forEach.call(dom.resultsList.querySelectorAll('.res-box'), function (inp) {
+          inp.addEventListener('blur', onResultCommit);
+          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
+        });
+      }
 
-function onNovoTorneio(){
-  openConfirm('Novo torneio', 'Isto apaga todos os resultados, a classificação e as estatísticas. As equipas, a configuração e o calendário mantêm-se. Continuar?', function(){
-    state.results={};
-    persistResults();
-    renderAll();
-    showToast('Torneio reiniciado — resultados limpos.', 'ok');
-  });
-}
+      function renderStandingsBody(standings) {
+        if (!standings.length) {
+          dom.standingsBody.innerHTML = '<tr><td colspan="10" class="empty">Sem equipas configuradas.</td></tr>';
+          return;
+        }
+        var rows = standings.map(function (s, i) {
+          var cls = i === 0 ? 'pos-gold' : i === 1 ? 'pos-silver' : i === 2 ? 'pos-bronze' : '';
+          var dgTxt = (s.DG > 0 ? '+' : '') + s.DG;
+          return '<tr class="' + cls + '">' +
+            '<td><span class="pos-badge">' + (i + 1) + '</span></td>' +
+            '<td class="team-cell">' + escapeHtml(s.name) + '</td>' +
+            '<td class="num">' + s.J + '</td><td class="num">' + s.V + '</td><td class="num">' + s.E + '</td><td class="num">' + s.D + '</td>' +
+            '<td class="num">' + s.GM + '</td><td class="num">' + s.GS + '</td><td class="num">' + dgTxt + '</td>' +
+            '<td class="num pts-cell">' + s.Pts + '</td>' +
+            '</tr>';
+        });
+        dom.standingsBody.innerHTML = rows.join('');
+      }
 
-function onAtualizar(){
-  renderAll();
-  showToast('Dashboard, classificação e estatísticas atualizados.', 'ok');
-}
+      function statCardsHtml(summary) {
+        var cards = [
+          ['Jogos realizados', summary.played + ' / ' + summary.total],
+          ['Jogos em falta', String(summary.pendentes)],
+          ['Golos marcados', String(summary.totalGoals)],
+          ['Média de golos / jogo', summary.media.toFixed(2)],
+          ['🔥 Melhor ataque', summary.bestAtkLabel],
+          ['🧱 Melhor defesa', summary.bestDefLabel],
+          ['Maior goleada', summary.biggestWinLabel],
+          ['Mais vitórias', summary.mostWinsLabel],
+          ['Mais empates', summary.mostDrawsLabel]
+        ];
+        return cards.map(function (c) {
+          return '<div class="stat-card"><div class="stat-label">' + c[0] + '</div><div class="stat-value">' + escapeHtml(c[1]) + '</div></div>';
+        }).join('');
+      }
 
-/* ---------- Modal ---------- */
-var confirmCallback=null;
-function openConfirm(title, body, onConfirm){
-  dom.modalTitle.textContent=title;
-  dom.modalBody.textContent=body;
-  confirmCallback=onConfirm;
-  dom.modalOverlay.hidden=false;
-  dom.modalConfirm.focus();
-}
-function closeConfirm(){
-  dom.modalOverlay.hidden=true;
-  confirmCallback=null;
-}
+      function renderStatsGrid(summary) { dom.statsGrid.innerHTML = statCardsHtml(summary); }
 
-/* ---------- Toast / save pill / backup pill ---------- */
-/* type: 'ok' | 'error' | '' */
-function showToast(msg, type){
-  var t=document.createElement('div');
-  t.className='toast'+(type==='error'?' toast-error':type==='ok'?' toast-ok':'');
-  t.textContent=msg;
-  dom.toastRoot.appendChild(t);
-  requestAnimationFrame(function(){ t.classList.add('show'); });
-  setTimeout(function(){
-    t.classList.remove('show');
-    setTimeout(function(){ t.remove(); }, 300);
-  }, 3200);
-}
+      function renderDashboard(summary) {
+        dom.tournamentTitle.textContent = (state.config.nome || 'Torneio').toUpperCase();
+        var top3 = summary.standings.slice(0, 3);
+        dom.dashboardPodium.innerHTML = top3.length ? top3.map(function (s, i) {
+          return '<div class="podium-card podium-' + (i + 1) + '">' +
+            '<div class="podium-rank">' + (i + 1) + 'º LUGAR</div>' +
+            '<div class="podium-name">' + escapeHtml(s.name) + '</div>' +
+            '<div class="podium-pts">' + s.Pts + ' pts · ' + s.J + ' jogos</div>' +
+            '</div>';
+        }).join('') : '<p class="empty">Sem equipas configuradas.</p>';
 
-var flashSavedTimer=null;
-function flashSaved(){
-  dom.savePill.textContent='Guardado ✓';
-  dom.savePill.classList.remove('pill-error');
-  dom.savePill.classList.add('pill-ok');
-  clearTimeout(flashSavedTimer);
-  flashSavedTimer=setTimeout(function(){
-    dom.savePill.textContent='Guardado';
-    dom.savePill.classList.remove('pill-ok');
-  }, 1600);
-}
-function flashError(){
-  dom.savePill.textContent='Erro ao guardar';
-  dom.savePill.classList.add('pill-error');
-}
-function flashBackup(isoTimestamp){
-  dom.backupPill.textContent='💾 Backup ' + fmtTimestamp(isoTimestamp);
-  dom.backupPill.classList.add('pill-fresh');
-}
+        var rest = summary.standings.slice(3, 8);
+        if (rest.length) {
+          dom.dashboardStandings.innerHTML =
+            '<table class="mini-table"><thead><tr><th>Pos</th><th style="text-align:left;">Equipa</th><th>J</th><th>Pts</th></tr></thead><tbody>' +
+            rest.map(function (s, i) { return '<tr><td class="num">' + (i + 4) + '</td><td>' + escapeHtml(s.name) + '</td><td class="num">' + s.J + '</td><td class="num">' + s.Pts + '</td></tr>'; }).join('') +
+            '</tbody></table>';
+        } else {
+          dom.dashboardStandings.innerHTML = '';
+        }
+        dom.dashboardStats.innerHTML = statCardsHtml(summary);
+      }
 
-/* =========================================================
-   BIND + INIT
-========================================================= */
-function switchTab(name){
-  dom.tabs.forEach(function(b){ b.classList.toggle('active', b.dataset.tab===name); });
-  dom.panels.forEach(function(p){ p.classList.toggle('active', p.id==='tab-'+name); });
-}
+      function updateTicker(summary) {
+        if (!summary.totalRounds) { dom.marqueeTicker.textContent = 'SEM CALENDÁRIO'; return; }
+        dom.marqueeTicker.textContent = 'JORNADA ' + summary.currentRound + ' / ' + summary.totalRounds + '   ·   ' + summary.played + '/' + summary.total + ' JOGOS DISPUTADOS';
+      }
 
-function bindEvents(){
-  dom.tabs.forEach(function(btn){
-    btn.addEventListener('click', function(){ switchTab(btn.dataset.tab); });
-  });
-  dom.btnGerarCalendario.addEventListener('click', onGerarCalendario);
-  dom.btnNovoTorneio.addEventListener('click', onNovoTorneio);
-  dom.btnAtualizar.addEventListener('click', onAtualizar);
+      /* =========================================================
+         EVENT HANDLERS
+      ========================================================= */
+      function onConfigFieldChange() {
+        state.config.nome = dom.cfgNome.value.trim() || 'Torneio';
+        state.config.pontosVitoria = numOr(dom.cfgVitoria.value, 3);
+        state.config.pontosEmpate = numOr(dom.cfgEmpate.value, 1);
+        state.config.pontosDerrota = numOr(dom.cfgDerrota.value, 0);
+        state.config.bonusGoleada = numOr(dom.cfgBonus.value, 1);
+        state.config.golosGoleada = numOr(dom.cfgGoleada.value, 3);
+        persistConfigTeams();
+        refreshComputed();
+      }
+      function onFormatFieldChange() {
+        var n = clamp(parseInt(dom.cfgNumEquipas.value, 10) || state.config.numEquipas, 2, 32);
+        var v = clamp(parseInt(dom.cfgNumVoltas.value, 10) || state.config.numVoltas, 1, 20);
+        dom.cfgNumEquipas.value = n; dom.cfgNumVoltas.value = v;
+        state.config.numEquipas = n; state.config.numVoltas = v;
+        persistConfigTeams();
+        renderScheduleHint();
+      }
 
-  /* Export / Import */
-  dom.btnExportar.addEventListener('click', exportJSON);
-  dom.btnImportar.addEventListener('click', function(){ dom.inputImportar.value=''; dom.inputImportar.click(); });
-  dom.inputImportar.addEventListener('change', function(){ importJSON(dom.inputImportar.files[0]); });
+      function onTeamNameChange(e) {
+        var idx = parseInt(e.target.dataset.idx, 10);
+        state.teams[idx] = e.target.value.trim();
+        persistConfigTeams();
+        renderCalendar(); renderResults(); refreshComputed();
+      }
 
-  dom.cfgNome.addEventListener('blur', onConfigFieldChange);
-  [dom.cfgVitoria,dom.cfgEmpate,dom.cfgDerrota,dom.cfgBonus,dom.cfgGoleada].forEach(function(el){
-    el.addEventListener('blur', onConfigFieldChange);
-  });
-  [dom.cfgNumEquipas,dom.cfgNumVoltas].forEach(function(el){
-    el.addEventListener('input', renderScheduleHint);
-    el.addEventListener('blur', onFormatFieldChange);
-  });
+      function onResultCommit(e) {
+        var gi = e.target.dataset.gi;
+        var row = e.target.closest('.result-split');
+        var inps = row.querySelectorAll('.res-box');
 
-  dom.modalCancel.addEventListener('click', closeConfirm);
-  dom.modalConfirm.addEventListener('click', function(){
-    var cb=confirmCallback; closeConfirm(); if(cb) cb();
-  });
-  dom.modalOverlay.addEventListener('click', function(e){ if(e.target===dom.modalOverlay) closeConfirm(); });
-  document.addEventListener('keydown', function(e){ if(e.key==='Escape' && !dom.modalOverlay.hidden) closeConfirm(); });
-}
+        var vHome = inps[0].value.trim();
+        var vAway = inps[1].value.trim();
 
-async function init(){
-  cacheDom();
-  bindEvents();
-  await loadState();
-  renderAll();
-  switchTab('dashboard');
-}
+        if (vHome === '' && vAway === '') {
+          delete state.results[gi];
+          inps[0].classList.remove('input-invalid');
+          inps[1].classList.remove('input-invalid');
+        }
+        else if (vHome !== '' && vAway !== '' && !isNaN(vHome) && !isNaN(vAway)) {
+          state.results[gi] = parseInt(vHome, 10) + '-' + parseInt(vAway, 10);
+          inps[0].classList.remove('input-invalid');
+          inps[1].classList.remove('input-invalid');
+        }
+        else {
+          if (vHome === '' || isNaN(vHome)) inps[0].classList.add('input-invalid'); else inps[0].classList.remove('input-invalid');
+          if (vAway === '' || isNaN(vAway)) inps[1].classList.add('input-invalid'); else inps[1].classList.remove('input-invalid');
+          return;
+        }
 
-if(document.readyState==='loading'){
-  document.addEventListener('DOMContentLoaded', init);
-} else {
-  init();
-}
+        persistResults();
+        refreshComputed();
+      }
 
-window.__torneioTestHooks = {
-  bergerRounds:bergerRounds, generateSchedule:generateSchedule, computeStandings:computeStandings,
-  buildSnapshot:buildSnapshot, validateSnapshot:validateSnapshot, applySnapshot:applySnapshot,
-  exportJSON:exportJSON, importJSON:importJSON,
-  getState:function(){ return state; }, init:init,
-  onGerarCalendario:onGerarCalendario, onNovoTorneio:onNovoTorneio, onAtualizar:onAtualizar
-};
+      function onGerarCalendario() {
+        var n = clamp(parseInt(dom.cfgNumEquipas.value, 10) || state.config.numEquipas, 2, 32);
+        var v = clamp(parseInt(dom.cfgNumVoltas.value, 10) || state.config.numVoltas, 1, 20);
+        var hasResults = Object.keys(state.results).length > 0;
+        var estimate = bergerRounds(n).reduce(function (s, r) { return s + r.pairs.length; }, 0) * v;
 
-})();
-</script>
+        function doIt() {
+          state.config.numEquipas = n; state.config.numVoltas = v;
+          applyGeneratedSchedule(n, v);
+          state.results = {};
+          persistConfigTeams();
+          persistSchedule();
+          persistResults();
+          renderAll();
+          showToast('Calendário gerado: ' + state.schedule.length + ' jogos em ' + state.roundsMeta.length + ' jornadas.', 'ok');
+        }
+
+        var msgParts = [];
+        if (hasResults) msgParts.push('Isto substitui o calendário atual e apaga todos os resultados já introduzidos.');
+        if (estimate > 1500) msgParts.push('Este calendário vai ter ' + estimate + ' jogos — é bastante grande.');
+        msgParts.push('As equipas e a configuração de pontuação mantêm-se.');
+
+        if (hasResults || estimate > 1500) {
+          openConfirm('Gerar novo calendário', msgParts.join(' '), doIt);
+        } else {
+          doIt();
+        }
+      }
+
+      function onNovoTorneio() {
+        openConfirm('Novo torneio', 'Isto apaga todos os resultados, a classificação e as estatísticas. As equipas, a configuração e o calendário mantêm-se. Continuar?', function () {
+          state.results = {};
+          persistResults();
+          renderAll();
+          showToast('Torneio reiniciado — resultados limpos.', 'ok');
+        });
+      }
+
+      function onAtualizar() {
+        renderAll();
+        showToast('Dashboard, classificação e estatísticas atualizados.', 'ok');
+      }
+
+      /* ---------- Modal ---------- */
+      var confirmCallback = null;
+      function openConfirm(title, body, onConfirm) {
+        dom.modalTitle.textContent = title;
+        dom.modalBody.textContent = body;
+        confirmCallback = onConfirm;
+        dom.modalOverlay.hidden = false;
+        dom.modalConfirm.focus();
+      }
+      function closeConfirm() {
+        dom.modalOverlay.hidden = true;
+        confirmCallback = null;
+      }
+
+      /* ---------- Toast / save pill / backup pill ---------- */
+      /* type: 'ok' | 'error' | '' */
+      function showToast(msg, type) {
+        var t = document.createElement('div');
+        t.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'ok' ? ' toast-ok' : '');
+        t.textContent = msg;
+        dom.toastRoot.appendChild(t);
+        requestAnimationFrame(function () { t.classList.add('show'); });
+        setTimeout(function () {
+          t.classList.remove('show');
+          setTimeout(function () { t.remove(); }, 300);
+        }, 3200);
+      }
+
+      var flashSavedTimer = null;
+      function flashSaved() {
+        dom.savePill.textContent = 'Guardado ✓';
+        dom.savePill.classList.remove('pill-error');
+        dom.savePill.classList.add('pill-ok');
+        clearTimeout(flashSavedTimer);
+        flashSavedTimer = setTimeout(function () {
+          dom.savePill.textContent = 'Guardado';
+          dom.savePill.classList.remove('pill-ok');
+        }, 1600);
+      }
+      function flashError() {
+        dom.savePill.textContent = 'Erro ao guardar';
+        dom.savePill.classList.add('pill-error');
+      }
+      function flashBackup(isoTimestamp) {
+        dom.backupPill.textContent = '💾 Backup ' + fmtTimestamp(isoTimestamp);
+        dom.backupPill.classList.add('pill-fresh');
+      }
+
+      /* =========================================================
+         BIND + INIT
+      ========================================================= */
+      function switchTab(name) {
+        dom.tabs.forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
+        dom.panels.forEach(function (p) { p.classList.toggle('active', p.id === 'tab-' + name); });
+      }
+
+      function bindEvents() {
+        dom.tabs.forEach(function (btn) {
+          btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
+        });
+        dom.btnGerarCalendario.addEventListener('click', onGerarCalendario);
+        dom.btnNovoTorneio.addEventListener('click', onNovoTorneio);
+        dom.btnAtualizar.addEventListener('click', onAtualizar);
+
+        /* Export / Import */
+        dom.btnExportar.addEventListener('click', exportJSON);
+        dom.btnImportar.addEventListener('click', function () { dom.inputImportar.value = ''; dom.inputImportar.click(); });
+        dom.inputImportar.addEventListener('change', function () { importJSON(dom.inputImportar.files[0]); });
+
+        dom.cfgNome.addEventListener('blur', onConfigFieldChange);
+        [dom.cfgVitoria, dom.cfgEmpate, dom.cfgDerrota, dom.cfgBonus, dom.cfgGoleada].forEach(function (el) {
+          el.addEventListener('blur', onConfigFieldChange);
+        });
+        [dom.cfgNumEquipas, dom.cfgNumVoltas].forEach(function (el) {
+          el.addEventListener('input', renderScheduleHint);
+          el.addEventListener('blur', onFormatFieldChange);
+        });
+
+        dom.modalCancel.addEventListener('click', closeConfirm);
+        dom.modalConfirm.addEventListener('click', function () {
+          var cb = confirmCallback; closeConfirm(); if (cb) cb();
+        });
+        dom.modalOverlay.addEventListener('click', function (e) { if (e.target === dom.modalOverlay) closeConfirm(); });
+        document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !dom.modalOverlay.hidden) closeConfirm(); });
+      }
+
+      async function init() {
+        cacheDom();
+        bindEvents();
+        await loadState();
+        renderAll();
+        switchTab('dashboard');
+      }
+
+      if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', init);
+      } else {
+        init();
+      }
+
+      window.__torneioTestHooks = {
+        bergerRounds: bergerRounds, generateSchedule: generateSchedule, computeStandings: computeStandings,
+        buildSnapshot: buildSnapshot, validateSnapshot: validateSnapshot, applySnapshot: applySnapshot,
+        exportJSON: exportJSON, importJSON: importJSON,
+        getState: function () { return state; }, init: init,
+        onGerarCalendario: onGerarCalendario, onNovoTorneio: onNovoTorneio, onAtualizar: onAtualizar
+      };
+
+    })();
+  </script>
 </body>
+
 </html>
