@@ -161,7 +161,6 @@
       color: #ffb4ae;
     }
 
-    /* NEW — backup pill */
     .backup-pill {
       font-size: 11px;
       letter-spacing: .04em;
@@ -206,7 +205,6 @@
       background: var(--pitch-700);
     }
 
-    /* NEW — toolbar separator */
     .toolbar-sep {
       width: 1px;
       background: rgba(255, 255, 255, .2);
@@ -267,7 +265,6 @@
       filter: brightness(1.08);
     }
 
-    /* NEW — teal import/export buttons */
     .btn-teal {
       background: rgba(47, 122, 79, .55);
       color: #d0f0dc;
@@ -699,7 +696,6 @@
       font-family: var(--font-display);
       font-size: 15px;
       padding: 6px 4px;
-      /* Remove as setas nativas dos campos de número */
       -moz-appearance: textfield;
     }
 
@@ -885,10 +881,6 @@
       <button class="btn btn-gold" id="btnGerarCalendario">🔄 Gerar Calendário</button>
       <button class="btn btn-outline" id="btnNovoTorneio">🧹 Novo Torneio</button>
       <button class="btn btn-ghost" id="btnAtualizar">🔁 Atualizar</button>
-      <div class="toolbar-sep" aria-hidden="true"></div>
-      <button class="btn btn-teal" id="btnExportar">⬇️ Exportar JSON</button>
-      <button class="btn btn-teal" id="btnImportar">⬆️ Importar JSON</button>
-      <input type="file" id="inputImportar" accept=".json,application/json" style="display:none">
     </div>
 
     <nav class="tabs" id="tabs">
@@ -899,6 +891,7 @@
       <button class="tab" data-tab="results">⚽ Resultados</button>
       <button class="tab" data-tab="standings">🏆 Classificação</button>
       <button class="tab" data-tab="stats">📊 Estatísticas</button>
+      <button class="tab" data-tab="data">💾 Dados</button>
     </nav>
 
     <main class="content">
@@ -983,6 +976,12 @@
           <div class="section-title">📅 Calendário</div>
           <p class="section-sub">Gerado automaticamente pelo algoritmo de Berger.</p>
           <div id="calendarList"></div>
+          <div id="calendarActions"
+            style="margin-top: 20px; padding-top: 16px; border-top: 1px solid var(--line); text-align: center; display: none;">
+            <button class="btn" id="btnAdicionarVolta"
+              style="background:var(--paper); border:1px solid var(--line); color:var(--pitch-800);">➕ Adicionar Volta
+              Extra (Manter Resultados)</button>
+          </div>
         </div>
       </section>
 
@@ -1029,6 +1028,21 @@
         <div class="card">
           <div class="section-title">📊 Estatísticas</div>
           <div class="stats-grid" id="statsGrid"></div>
+        </div>
+      </section>
+
+      <!-- DADOS E BACKUPS -->
+      <section id="tab-data" class="panel">
+        <div class="card">
+          <div class="section-title">💾 Backup e Restauro</div>
+          <p class="section-sub">Guarda uma cópia de segurança do teu torneio (equipas, configurações e resultados) num
+            ficheiro .json que podes importar mais tarde em qualquer dispositivo.</p>
+
+          <div style="display:flex; gap:12px; margin-top: 18px; flex-wrap: wrap;">
+            <button class="btn btn-teal" id="btnExportar">⬇️ Exportar JSON</button>
+            <button class="btn btn-teal" id="btnImportar">⬆️ Importar JSON</button>
+            <input type="file" id="inputImportar" accept=".json,application/json" style="display:none">
+          </div>
         </div>
       </section>
 
@@ -1246,10 +1260,6 @@
 
       /* =========================================================
          SNAPSHOT — build / validate / apply
-         -------------------------------------------------------
-         buildSnapshot()   → returns the full state object
-         applySnapshot(s)  → restores state from a snapshot object
-         validateSnapshot  → returns true if object looks valid
       ========================================================= */
       function buildSnapshot() {
         return {
@@ -1285,10 +1295,6 @@
 
       /* =========================================================
          PERSISTENCE
-         -------------------------------------------------------
-         Every persist* call also triggers persistBackup() so the
-         'backup' key in storage is always in sync with the latest
-         full state.
       ========================================================= */
       async function persistBackup() {
         var snap = buildSnapshot();
@@ -1325,11 +1331,6 @@
 
       /* =========================================================
          LOAD STATE
-         -------------------------------------------------------
-         Priority order:
-           1. Individual storage keys (config-teams, schedule, results)
-           2. If none found → try to restore from 'backup' key
-           3. If still nothing → create fresh defaults
       ========================================================= */
       async function loadState() {
         var ct = null, sc = null, rs = null, bk = null;
@@ -1341,7 +1342,6 @@
         var hasIndividualData = ct && ct.config && ct.teams;
 
         if (hasIndividualData) {
-          /* Normal load from individual keys */
           state.config = Object.assign(defaultConfig(), ct.config);
           state.teams = ensureTeamsLength(ct.teams);
 
@@ -1357,9 +1357,7 @@
           state.results = rs || {};
 
         } else if (validateSnapshot(bk)) {
-          /* Restore from backup snapshot */
           applySnapshot(bk);
-          /* Re-write individual keys so next load is normal */
           await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams }));
           await storageSet('schedule', JSON.stringify({
             schedule: state.schedule, roundsMeta: state.roundsMeta,
@@ -1370,7 +1368,6 @@
           flashBackup(bk.exportedAt);
 
         } else {
-          /* Fresh start */
           state.config = defaultConfig();
           state.teams = defaultTeams();
           applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas);
@@ -1379,7 +1376,6 @@
           await persistResults();
         }
 
-        /* Show backup pill timestamp if backup exists */
         if (bk && bk.exportedAt) flashBackup(bk.exportedAt);
       }
 
@@ -1424,7 +1420,6 @@
             'Isto vai substituir TODO o estado atual (configuração, equipas, calendário e resultados) pelo conteúdo do ficheiro. Continuar?',
             async function () {
               applySnapshot(snap);
-              /* Persist all keys + backup */
               await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams }));
               await storageSet('schedule', JSON.stringify({
                 schedule: state.schedule, roundsMeta: state.roundsMeta,
@@ -1533,6 +1528,7 @@
       function cacheDom() {
         ['tournamentTitle', 'savePill', 'backupPill', 'marqueeTicker',
           'btnGerarCalendario', 'btnNovoTorneio', 'btnAtualizar', 'btnExportar', 'btnImportar', 'inputImportar',
+          'btnAdicionarVolta', 'calendarActions',
           'dashboardPodium', 'dashboardStandings', 'dashboardStats',
           'cfgNome', 'cfgNumEquipas', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
           'teamsList', 'calendarList', 'resultsList', 'standingsBody', 'statsGrid',
@@ -1603,7 +1599,10 @@
       }
 
       function renderCalendar() {
-        if (!state.schedule.length) {
+        var hasSchedule = state.schedule.length > 0;
+        dom.calendarActions.style.display = hasSchedule ? 'block' : 'none';
+
+        if (!hasSchedule) {
           dom.calendarList.innerHTML = '<p class="empty">Ainda não há calendário. Vai a Configuração e clica em 🔄 Gerar Calendário.</p>';
           return;
         }
@@ -1840,6 +1839,33 @@
         showToast('Dashboard, classificação e estatísticas atualizados.', 'ok');
       }
 
+      function onAdicionarVolta() {
+        if (!state.schedule.length) return;
+
+        var novaVolta = state.scheduleVoltas + 1;
+
+        openConfirm('Adicionar Volta Extra',
+          'Isto vai acrescentar a volta ' + novaVolta + ' ao calendário atual. Todos os teus resultados já inseridos ficarão intactos. Continuar?',
+          function () {
+            var out = generateSchedule(state.scheduleTeamCount, novaVolta);
+
+            state.schedule = out.schedule;
+            state.roundsMeta = out.roundsMeta;
+            state.scheduleVoltas = novaVolta;
+
+            // Sincronizar o input na tab de Configurações
+            state.config.numVoltas = novaVolta;
+            if (dom.cfgNumVoltas) dom.cfgNumVoltas.value = novaVolta;
+
+            persistConfigTeams();
+            persistSchedule();
+            renderAll();
+
+            showToast('Volta extra adicionada com sucesso!', 'ok');
+          }
+        );
+      }
+
       /* ---------- Modal ---------- */
       var confirmCallback = null;
       function openConfirm(title, body, onConfirm) {
@@ -1855,7 +1881,6 @@
       }
 
       /* ---------- Toast / save pill / backup pill ---------- */
-      /* type: 'ok' | 'error' | '' */
       function showToast(msg, type) {
         var t = document.createElement('div');
         t.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'ok' ? ' toast-ok' : '');
@@ -1903,6 +1928,8 @@
         dom.btnGerarCalendario.addEventListener('click', onGerarCalendario);
         dom.btnNovoTorneio.addEventListener('click', onNovoTorneio);
         dom.btnAtualizar.addEventListener('click', onAtualizar);
+
+        dom.btnAdicionarVolta.addEventListener('click', onAdicionarVolta);
 
         /* Export / Import */
         dom.btnExportar.addEventListener('click', exportJSON);
