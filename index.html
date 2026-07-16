@@ -788,6 +788,52 @@
       font-weight: 600;
     }
 
+    .penalties-split {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      grid-column: 1 / span 3;
+      margin-top: 4px;
+      padding: 6px 12px;
+      background: rgba(203, 161, 53, 0.1);
+      border: 1px solid rgba(203, 161, 53, 0.3);
+      border-radius: var(--radius-sm);
+      font-size: 13px;
+      color: var(--pitch-800);
+    }
+
+    [data-theme="dark"] .penalties-split {
+      color: var(--gold);
+    }
+
+    .pen-box {
+      width: 32px;
+      text-align: center;
+      font-family: var(--font-display);
+      font-size: 13px;
+      padding: 4px;
+      border: 1px solid var(--line);
+      border-radius: 4px;
+      -moz-appearance: textfield;
+      background: var(--card);
+      color: var(--ink);
+    }
+
+    .pen-box::-webkit-outer-spin-button,
+    .pen-box::-webkit-inner-spin-button {
+      -webkit-appearance: none;
+      margin: 0;
+    }
+
+    .pen-label {
+      font-weight: 600;
+      margin-right: 4px;
+      text-transform: uppercase;
+      font-size: 11px;
+      letter-spacing: 0.05em;
+    }
+
     .score-btn {
       width: 28px;
       height: 28px;
@@ -1196,6 +1242,15 @@
               <input type="number" id="cfgNumEquipas" class="input" min="2" max="32" step="1">
             </div>
             <div class="field">
+              <label for="cfgNumGrupos">Número de Grupos</label>
+              <select id="cfgNumGrupos" class="input">
+                <option value="1">1 (Liga Única)</option>
+                <option value="2">2 Grupos</option>
+                <option value="4">4 Grupos</option>
+                <option value="8">8 Grupos</option>
+              </select>
+            </div>
+            <div class="field">
               <label for="cfgNumVoltas">Número de voltas</label>
               <input type="number" id="cfgNumVoltas" class="input" min="1" max="20" step="1">
               <p class="field-note">1 = cada equipa joga uma vez · 2 = casa e fora · 3+ = repetição configurável</p>
@@ -1205,6 +1260,26 @@
 
           <button class="btn btn-gold" id="btnGerarCalendario"
             style="margin-top: 16px; width: 100%; justify-content: center;">🔄 Gerar Calendário</button>
+        </div>
+
+        <div class="card">
+          <div class="section-title">🏆 Eliminatórias (Mata-Mata)</div>
+          <p class="section-sub">Ativa o modo de eliminatórias que será jogado após o fim da fase de liga.</p>
+          <div class="form-grid">
+            <div class="field" style="display:flex; align-items:center; gap:8px; margin-top:20px;">
+              <input type="checkbox" id="cfgMataMata" style="width:18px;height:18px;cursor:pointer;">
+              <label for="cfgMataMata" style="margin:0;cursor:pointer;">Ativar Eliminatórias</label>
+            </div>
+            <div class="field">
+              <label for="cfgNumPlayoffTeams">Equipas Apuradas (da Liga)</label>
+              <select id="cfgNumPlayoffTeams" class="input">
+                <option value="2">Top 2 (Final)</option>
+                <option value="4">Top 4 (Meias-Finais)</option>
+                <option value="8">Top 8 (Quartos-de-Final)</option>
+                <option value="16">Top 16 (Oitavos-de-Final)</option>
+              </select>
+            </div>
+          </div>
         </div>
 
         <div class="card">
@@ -1284,6 +1359,8 @@
             <button class="btn" id="btnAdicionarVolta"
               style="background:var(--paper); border:1px solid var(--line); color:var(--pitch-800);">➕ Adicionar Volta
               Extra (Manter Resultados)</button>
+            <button class="btn btn-gold" id="btnGerarEliminatorias" style="display: none; margin-left: 10px;">🏆 Gerar
+              Eliminatórias</button>
           </div>
         </div>
       </section>
@@ -1302,24 +1379,7 @@
       <section id="tab-standings" class="panel">
         <div class="card">
           <div class="section-title">🏆 Classificação</div>
-          <div class="table-wrap">
-            <table class="standings-table">
-              <thead>
-                <tr>
-                  <th>Pos</th>
-                  <th style="text-align:left;">Equipa</th>
-                  <th>J</th>
-                  <th>V</th>
-                  <th>E</th>
-                  <th>D</th>
-                  <th>GM</th>
-                  <th>GS</th>
-                  <th>DG</th>
-                  <th>Pts</th>
-                </tr>
-              </thead>
-              <tbody id="standingsBody"></tbody>
-            </table>
+          <div class="table-wrap" id="standingsWrapper">
           </div>
           <p class="field-note" style="margin-top:14px;">Critérios de desempate, por ordem: pontos → diferença de golos
             → golos marcados → confronto direto (mini-tabela só com os jogos entre as equipas empatadas) → menos golos
@@ -1388,10 +1448,13 @@
       /* =========================================================
          MIGRAÇÃO DE ESTRUTURAS DE DADOS
       ========================================================= */
-      // Garante que 'state.teams' é sempre Array de Objetos com Cor (sem emoji)
       function ensureTeamsStructure(arr) {
         var out = (arr || []).slice(0, 32).map(function (t, i) {
-          if (typeof t === 'object' && t !== null && t.name !== undefined) return { name: t.name, color: t.color || '#2F7A4F' };
+          if (typeof t === 'object' && t !== null && t.name !== undefined) {
+             var obj = { name: t.name, color: t.color || '#2F7A4F' };
+             if (t.group !== undefined) obj.group = t.group;
+             return obj;
+          }
           return { name: (typeof t === 'string' ? t : ('Equipa ' + (i + 1))), color: '#2F7A4F' };
         });
         while (out.length < 32) {
@@ -1538,31 +1601,64 @@
         return rounds;
       }
 
-      function generateSchedule(numTeams, numVoltas) {
-        var base = bergerRounds(numTeams);
-        var schedule = []; var roundsMeta = []; var jornada = 1;
+      function generateSchedule(groupsIndices, numVoltas) {
+        var schedule = [];
+        var roundsMeta = [];
+        var nGrupos = groupsIndices.length;
+        
+        var maxRoundsPerVolta = 0;
+        var groupBergerRounds = [];
+        for (var g = 0; g < nGrupos; g++) {
+          var bRounds = bergerRounds(groupsIndices[g].length);
+          groupBergerRounds.push(bRounds);
+          if (bRounds.length > maxRoundsPerVolta) maxRoundsPerVolta = bRounds.length;
+        }
+
+        var jornada = 1;
         for (var v = 0; v < numVoltas; v++) {
           var mirror = v % 2 === 1;
-          for (var ri = 0; ri < base.length; ri++) {
-            var round = base[ri];
-            for (var pi = 0; pi < round.pairs.length; pi++) {
-              var pair = round.pairs[pi];
-              var home = mirror ? pair[1] : pair[0];
-              var away = mirror ? pair[0] : pair[1];
-              schedule.push({ jornada: jornada, home: home, away: away });
+          for (var ri = 0; ri < maxRoundsPerVolta; ri++) {
+            var roundByes = [];
+            for (var g = 0; g < nGrupos; g++) {
+               if (ri < groupBergerRounds[g].length) {
+                 var round = groupBergerRounds[g][ri];
+                 for (var pi = 0; pi < round.pairs.length; pi++) {
+                   var pair = round.pairs[pi];
+                   var t1 = pair[0] === -1 ? -1 : groupsIndices[g][pair[0]];
+                   var t2 = pair[1] === -1 ? -1 : groupsIndices[g][pair[1]];
+                   var home = mirror ? t2 : t1;
+                   var away = mirror ? t1 : t2;
+                   schedule.push({ jornada: jornada, home: home, away: away, group: g });
+                 }
+                 if (round.bye !== null) {
+                   roundByes.push(groupsIndices[g][round.bye]);
+                 }
+               }
             }
-            roundsMeta.push({ jornada: jornada, bye: round.bye });
+            roundsMeta.push({ jornada: jornada, bye: roundByes.length ? roundByes.join(', ') : null });
             jornada++;
           }
         }
         return { schedule: schedule, roundsMeta: roundsMeta };
       }
 
-      function computeStandings(teamNames, schedule, results, config) {
-        var stats = teamNames.map(function (name, idx) {
+      function computeStandings(teamsArray, schedule, results, config) {
+        var nGrupos = config.numGrupos || 1;
+        var groupStats = [];
+        for (var g = 0; g < nGrupos; g++) {
+           groupStats.push({
+             name: nGrupos > 1 ? 'Grupo ' + String.fromCharCode(65 + g) : 'Classificação Geral',
+             standings: []
+           });
+        }
+
+        var stats = teamsArray.map(function (t, idx) {
+          var name = typeof t === 'string' ? t : (t && t.name ? t.name : ('Equipa ' + (idx + 1)));
           return { idx: idx, name: name, J: 0, V: 0, E: 0, D: 0, GM: 0, GS: 0, Pts: 0 };
         });
+
         schedule.forEach(function (game, gi) {
+          if (game.isPlayoff) return;
           var resObj = results[gi];
           if (!resObj) return;
           var resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
@@ -1571,6 +1667,7 @@
           if (!m) return;
           var gc = parseInt(m[1], 10), gf = parseInt(m[2], 10);
           var home = stats[game.home], away = stats[game.away];
+          if (!home || !away) return;
 
           if (typeof resObj === 'object' && resObj.status === 'agendado') return;
 
@@ -1593,20 +1690,30 @@
         });
         stats.forEach(function (s) { s.DG = s.GM - s.GS; });
 
-        var arr = stats.slice().sort(function (a, b) {
-          return (b.Pts - a.Pts) || (b.DG - a.DG) || (b.GM - a.GM);
+        stats.forEach(function (s) {
+           var t = teamsArray[s.idx];
+           var g = t && t.group !== undefined ? t.group : 0;
+           if (g >= nGrupos) g = nGrupos - 1;
+           groupStats[g].standings.push(s);
         });
 
-        var finalArr = []; var i = 0;
-        while (i < arr.length) {
-          var j = i + 1;
-          while (j < arr.length && arr[j].Pts === arr[i].Pts && arr[j].DG === arr[i].DG && arr[j].GM === arr[i].GM) j++;
-          var cluster = arr.slice(i, j);
-          if (cluster.length > 1) cluster = resolveHeadToHead(cluster, schedule, results, config);
-          finalArr = finalArr.concat(cluster);
-          i = j;
-        }
-        return finalArr;
+        groupStats.forEach(function(group) {
+          var arr = group.standings.sort(function (a, b) {
+            return (b.Pts - a.Pts) || (b.DG - a.DG) || (b.GM - a.GM);
+          });
+          var finalArr = []; var i = 0;
+          while (i < arr.length) {
+            var j = i + 1;
+            while (j < arr.length && arr[j].Pts === arr[i].Pts && arr[j].DG === arr[i].DG && arr[j].GM === arr[i].GM) j++;
+            var cluster = arr.slice(i, j);
+            if (cluster.length > 1) cluster = resolveHeadToHead(cluster, schedule, results, config);
+            finalArr = finalArr.concat(cluster);
+            i = j;
+          }
+          group.standings = finalArr;
+        });
+        
+        return groupStats;
       }
 
       function resolveHeadToHead(cluster, schedule, results, config) {
@@ -1676,8 +1783,9 @@
 
       function defaultConfig() {
         return {
-          nome: 'Torneio 2026', numEquipas: 8, numVoltas: 2,
-          pontosVitoria: 3, pontosEmpate: 1, pontosDerrota: 0, bonusGoleada: 1, golosGoleada: 3
+          nome: 'Torneio 2026', numEquipas: 8, numGrupos: 1, numVoltas: 2,
+          pontosVitoria: 3, pontosEmpate: 1, pontosDerrota: 0, bonusGoleada: 1, golosGoleada: 3,
+          mataMata: false, numPlayoffTeams: 4
         };
       }
       function defaultTeams() { return ensureTeamsStructure([]); }
@@ -1740,8 +1848,42 @@
         flashSaved(); await persistBackup();
       }
 
-      function applyGeneratedSchedule(numEquipas, numVoltas) {
-        var out = generateSchedule(numEquipas, numVoltas);
+      function applyGeneratedSchedule(numEquipas, numVoltas, randomizeGroups) {
+        var groupsIndices = [];
+        var nGrupos = state.config.numGrupos || 1;
+        var indices = []; for (var i = 0; i < numEquipas; i++) indices.push(i);
+
+        if (randomizeGroups) {
+          for (var i = indices.length - 1; i > 0; i--) {
+            var j = Math.floor(Math.random() * (i + 1));
+            var temp = indices[i];
+            indices[i] = indices[j];
+            indices[j] = temp;
+          }
+        } else {
+          var byGroup = {};
+          for (var i = 0; i < numEquipas; i++) {
+            var g = state.teams[i].group || 0;
+            if (g >= nGrupos) g = nGrupos - 1;
+            byGroup[g] = byGroup[g] || [];
+            byGroup[g].push(i);
+          }
+          indices = [];
+          for (var g = 0; g < nGrupos; g++) {
+            if (byGroup[g]) indices = indices.concat(byGroup[g]);
+          }
+        }
+
+        var teamsPerGroup = Math.ceil(numEquipas / nGrupos);
+        for (var g = 0; g < nGrupos; g++) {
+          var chunk = indices.slice(g * teamsPerGroup, (g + 1) * teamsPerGroup);
+          groupsIndices.push(chunk);
+          chunk.forEach(function(idx) {
+             if (state.teams[idx]) state.teams[idx].group = g;
+          });
+        }
+
+        var out = generateSchedule(groupsIndices, numVoltas);
         state.schedule = out.schedule;
         state.roundsMeta = out.roundsMeta;
         state.scheduleTeamCount = numEquipas;
@@ -1768,7 +1910,7 @@
             state.scheduleTeamCount = sc.scheduleTeamCount || state.config.numEquipas;
             state.scheduleVoltas = sc.scheduleVoltas || state.config.numVoltas;
           } else {
-            applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas);
+            applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
             await persistSchedule();
           }
           state.results = rs || {};
@@ -1783,7 +1925,7 @@
           state.config = defaultConfig();
           state.teams = defaultTeams();
           state.squads = defaultSquads();
-          applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas);
+          applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
           await persistConfigTeams();
           await persistSchedule();
           await persistResults();
@@ -1823,10 +1965,12 @@
          HELPERS & VISUALS (EMBLEMAS/CORES)
       ========================================================= */
       function getTeamName(idx) {
+        if (typeof idx === 'string') return idx;
         var t = state.teams[idx];
         return t && t.name ? t.name : ('Equipa ' + (idx + 1));
       }
       function getTeamDisplay(idx) {
+        if (typeof idx === 'string') return '<span style="color:var(--ink-faint); font-style:italic; font-size:12px;">' + escapeHtml(idx) + '</span>';
         var t = state.teams[idx] || { name: 'Equipa ' + (idx + 1), color: '#2F7A4F' };
         var name = escapeHtml(t.name || ('Equipa ' + (idx + 1)));
         var colorBadge = '<span style="display:inline-block; width:10px; height:10px; border-radius:50%; background-color:' + escapeHtml(t.color) + '; margin-right:6px; box-shadow:0 0 2px rgba(0,0,0,0.3);"></span>';
@@ -1845,8 +1989,11 @@
       }
 
       function computeStatsSummary() {
-        var teams = getActiveTeamNames();
-        var standings = computeStandings(teams, state.schedule, state.results, state.config);
+        var teamsArray = state.teams.slice(0, state.scheduleTeamCount);
+        var groupsData = computeStandings(teamsArray, state.schedule, state.results, state.config);
+        var flatStandings = [];
+        groupsData.forEach(function(g) { flatStandings = flatStandings.concat(g.standings); });
+
         var total = state.schedule.length;
 
         var playedKeys = Object.keys(state.results).filter(function (k) {
@@ -1856,9 +2003,9 @@
           return /^\d+-\d+$/.test(scoreStr.trim());
         });
         var played = playedKeys.length;
-        var totalGoals = standings.reduce(function (s, t) { return s + t.GM; }, 0);
+        var totalGoals = flatStandings.reduce(function (s, t) { return s + t.GM; }, 0);
         var media = played > 0 ? totalGoals / played : 0;
-        var withGames = standings.filter(function (s) { return s.J > 0; });
+        var withGames = flatStandings.filter(function (s) { return s.J > 0; });
 
         function pick(arr, better) { if (!arr.length) return null; return arr.reduce(function (a, b) { return better(b, a) ? b : a; }); }
         var bestAtk = pick(withGames, function (b, a) { return b.GM > a.GM; });
@@ -1896,7 +2043,7 @@
         }
 
         return {
-          standings: standings, total: total, played: played, pendentes: total - played,
+          groupsData: groupsData, flatStandings: flatStandings, total: total, played: played, pendentes: total - played,
           totalGoals: totalGoals, media: media,
           bestAtkLabel: bestAtk ? (bestAtk.name + ' — ' + bestAtk.GM + ' golos') : '—',
           bestDefLabel: bestDef ? (bestDef.name + ' — ' + bestDef.GS + ' sofridos') : '—',
@@ -1915,11 +2062,12 @@
         ['tournamentTitle', 'savePill', 'backupPill', 'marqueeTicker',
           'btnGerarCalendario', 'btnNovoTorneio', 'btnAtualizar', 'btnDarkMode', 'btnExportar', 'btnImportar', 'inputImportar',
           'btnMobileMenu', 'tabs',
-          'btnAdicionarVolta', 'calendarActions',
+          'btnAdicionarVolta', 'btnGerarEliminatorias', 'calendarActions',
           'dashboardPodium', 'dashboardStandings', 'dashboardStats', 'dashboardScorers',
-          'cfgNome', 'cfgNumEquipas', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
+          'cfgNome', 'cfgNumEquipas', 'cfgNumGrupos', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
+          'cfgMataMata', 'cfgNumPlayoffTeams',
           'teamsList', 'squadTeamSelect', 'squadPlayerNum', 'squadPlayerName', 'btnAddPlayer', 'squadList',
-          'calendarList', 'resultsList', 'standingsBody', 'statsGrid',
+          'calendarList', 'resultsList', 'standingsWrapper', 'statsGrid',
           'modalOverlay', 'modalTitle', 'modalBody', 'modalCancel', 'modalConfirm', 'toastRoot'
         ].forEach(function (id) { dom[id] = document.getElementById(id); });
         dom.panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
@@ -1936,22 +2084,39 @@
 
       function refreshComputed() {
         var summary = computeStatsSummary();
-        renderStandingsBody(summary.standings);
+        renderStandingsWrapper(summary.groupsData);
         renderStatsGrid(summary);
         renderDashboard(summary);
         updateTicker(summary);
         renderScheduleHint();
+
+        if (state.config.mataMata && dom.btnGerarEliminatorias) {
+          var leagueTotal = 0;
+          var leaguePlayed = 0;
+          var hasPlayoffs = false;
+          state.schedule.forEach(function (g, gi) {
+            if (g.isPlayoff) { hasPlayoffs = true; return; }
+            leagueTotal++;
+            var res = state.results[gi];
+            if (res && typeof res === 'object' && res.status === 'terminado') leaguePlayed++;
+          });
+          var leagueFinished = (leagueTotal > 0 && leagueTotal === leaguePlayed);
+          dom.btnGerarEliminatorias.style.display = (leagueFinished && !hasPlayoffs) ? 'inline-flex' : 'none';
+        }
       }
 
       function populateConfigForm() {
         dom.cfgNome.value = state.config.nome;
         dom.cfgNumEquipas.value = state.config.numEquipas;
+        dom.cfgNumGrupos.value = state.config.numGrupos || 1;
         dom.cfgNumVoltas.value = state.config.numVoltas;
         dom.cfgVitoria.value = state.config.pontosVitoria;
         dom.cfgEmpate.value = state.config.pontosEmpate;
         dom.cfgDerrota.value = state.config.pontosDerrota;
         dom.cfgBonus.value = state.config.bonusGoleada;
         dom.cfgGoleada.value = state.config.golosGoleada;
+        dom.cfgMataMata.checked = state.config.mataMata || false;
+        dom.cfgNumPlayoffTeams.value = state.config.numPlayoffTeams || 4;
       }
 
       function renderScheduleHint() {
@@ -1969,11 +2134,13 @@
         for (var i = 0; i < 32; i++) {
           var active = i < state.scheduleTeamCount;
           var t = state.teams[i] || { name: '', color: '#2F7A4F' };
+          var groupTag = (active && state.config.numGrupos > 1 && t.group !== undefined) ? '<span class="team-tag" style="background:var(--pitch-800); color:#fff; border:none; margin-left: 8px;">Grupo ' + String.fromCharCode(65 + t.group) + '</span>' : '';
           html.push(
             '<div class="team-row' + (active ? '' : ' team-row-inactive') + '">' +
             '<span class="team-num">' + (i + 1) + '</span>' +
             '<input type="color" class="team-color-picker team-prop" data-prop="color" data-idx="' + i + '" value="' + escapeHtml(t.color) + '" title="Cor da Equipa">' +
             '<input type="text" class="input team-prop" data-prop="name" data-idx="' + i + '" value="' + escapeHtml(t.name) + '" placeholder="Equipa ' + (i + 1) + '">' +
+            groupTag +
             (active ? '' : '<span class="team-tag">fora do calendário atual</span>') +
             '</div>'
           );
@@ -2077,6 +2244,7 @@
 
             var val = state.results[gi];
             var vHome = '', vAway = '';
+            var pHome = '', pAway = '';
             var status = 'agendado';
 
             if (val) {
@@ -2084,6 +2252,24 @@
               var scoreStr = typeof val === 'object' ? val.score : String(val);
               var m = /^(\d+)-(\d+)$/.exec(scoreStr);
               if (m) { vHome = m[1]; vAway = m[2]; }
+              if (val.penalties) {
+                var mp = /^(\d+)-(\d+)$/.exec(val.penalties);
+                if (mp) { pHome = mp[1]; pAway = mp[2]; }
+              }
+            }
+
+            var isTie = (vHome !== '' && vAway !== '' && vHome === vAway);
+            var isTerminado = (status === 'terminado');
+            var isPlayoff = g.isPlayoff;
+
+            var penaltiesHtml = '';
+            if (isTerminado && isTie && isPlayoff) {
+              penaltiesHtml = '<div class="penalties-split">' +
+                '<span class="pen-label">Penáltis</span>' +
+                '<input type="number" class="input pen-box" data-gi="' + gi + '" data-side="home" value="' + escapeHtml(pHome) + '" min="0" max="99" inputmode="numeric">' +
+                '<span class="res-sep">-</span>' +
+                '<input type="number" class="input pen-box" data-gi="' + gi + '" data-side="away" value="' + escapeHtml(pAway) + '" min="0" max="99" inputmode="numeric">' +
+                '</div>';
             }
 
             parts.push(
@@ -2099,6 +2285,7 @@
               '<button class="score-btn" data-gi="' + gi + '" data-side="away" data-action="add">+</button>' +
               '</div>' +
               '<span class="fx-away">' + getTeamDisplay(g.away) + '</span>' +
+              penaltiesHtml +
               '<div style="grid-column: 1 / span 3; text-align: center; margin-top: 10px;">' + getStatusBadge(status, gi) + '</div>' +
               '</div>'
             );
@@ -2112,6 +2299,11 @@
           inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
         });
 
+        Array.prototype.forEach.call(dom.resultsList.querySelectorAll('.pen-box'), function (inp) {
+          inp.addEventListener('blur', onResultCommit);
+          inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
+        });
+
         Array.prototype.forEach.call(dom.resultsList.querySelectorAll('.score-btn'), function (btn) {
           btn.addEventListener('click', onScoreBtnClick);
         });
@@ -2121,20 +2313,47 @@
         });
       }
 
-      function renderStandingsBody(standings) {
-        if (!standings.length) { dom.standingsBody.innerHTML = '<tr><td colspan="10" class="empty">Sem equipas configuradas.</td></tr>'; return; }
-        var rows = standings.map(function (s, i) {
-          var cls = i === 0 ? 'pos-gold' : i === 1 ? 'pos-silver' : i === 2 ? 'pos-bronze' : '';
-          var dgTxt = (s.DG > 0 ? '+' : '') + s.DG;
-          return '<tr class="' + cls + '">' +
-            '<td><span class="pos-badge">' + (i + 1) + '</span></td>' +
-            '<td class="team-cell">' + getTeamDisplay(s.idx) + '</td>' +
-            '<td class="num">' + s.J + '</td><td class="num">' + s.V + '</td><td class="num">' + s.E + '</td><td class="num">' + s.D + '</td>' +
-            '<td class="num">' + s.GM + '</td><td class="num">' + s.GS + '</td><td class="num">' + dgTxt + '</td>' +
-            '<td class="num pts-cell">' + s.Pts + '</td>' +
-            '</tr>';
+      function renderStandingsWrapper(groupsData) {
+        if (!groupsData || !groupsData.length || !groupsData[0].standings.length) {
+          dom.standingsWrapper.innerHTML = '<table class="standings-table"><tr><td colspan="10" class="empty">Sem equipas configuradas.</td></tr></table>';
+          return;
+        }
+
+        var html = groupsData.map(function(group) {
+          var rows = group.standings.map(function (s, i) {
+            var cls = i === 0 ? 'pos-gold' : i === 1 ? 'pos-silver' : i === 2 ? 'pos-bronze' : '';
+            var dgTxt = (s.DG > 0 ? '+' : '') + s.DG;
+            return '<tr class="' + cls + '">' +
+              '<td><span class="pos-badge">' + (i + 1) + '</span></td>' +
+              '<td class="team-cell">' + getTeamDisplay(s.idx) + '</td>' +
+              '<td class="num">' + s.J + '</td><td class="num">' + s.V + '</td><td class="num">' + s.E + '</td><td class="num">' + s.D + '</td>' +
+              '<td class="num">' + s.GM + '</td><td class="num">' + s.GS + '</td><td class="num">' + dgTxt + '</td>' +
+              '<td class="num pts-cell">' + s.Pts + '</td>' +
+              '</tr>';
+          });
+          
+          var titleHtml = groupsData.length > 1 ? '<h3 style="margin-top:20px; margin-bottom:10px; color:var(--pitch-800); font-weight:600;">' + group.name + '</h3>' : '';
+          
+          return titleHtml + '<table class="standings-table">' +
+            '<thead>' +
+              '<tr>' +
+                '<th>Pos</th>' +
+                '<th style="text-align:left;">Equipa</th>' +
+                '<th>J</th>' +
+                '<th>V</th>' +
+                '<th>E</th>' +
+                '<th>D</th>' +
+                '<th>GM</th>' +
+                '<th>GS</th>' +
+                '<th>DG</th>' +
+                '<th>Pts</th>' +
+              '</tr>' +
+            '</thead>' +
+            '<tbody>' + rows.join('') + '</tbody>' +
+          '</table>';
         });
-        dom.standingsBody.innerHTML = rows.join('');
+
+        dom.standingsWrapper.innerHTML = html.join('');
       }
 
       function statCardsHtml(summary) {
@@ -2196,7 +2415,8 @@
 
       function renderDashboard(summary) {
         dom.tournamentTitle.textContent = (state.config.nome || 'Torneio').toUpperCase();
-        var top3 = summary.standings.slice(0, 3);
+        var sortedAll = summary.flatStandings.slice().sort(function(a,b) { return (b.Pts - a.Pts) || (b.DG - a.DG) || (b.GM - a.GM); });
+        var top3 = sortedAll.slice(0, 3);
         dom.dashboardPodium.innerHTML = top3.length ? top3.map(function (s, i) {
           return '<div class="podium-card podium-' + (i + 1) + '">' +
             '<div class="podium-rank">' + (i + 1) + 'º LUGAR</div>' +
@@ -2205,7 +2425,7 @@
             '</div>';
         }).join('') : '<p class="empty">Sem equipas configuradas.</p>';
 
-        var rest = summary.standings.slice(3, 8);
+        var rest = sortedAll.slice(3, 8);
         if (rest.length) {
           dom.dashboardStandings.innerHTML =
             '<table class="mini-table"><thead><tr><th>Pos</th><th style="text-align:left;">Equipa</th><th>J</th><th>Pts</th></tr></thead><tbody>' +
@@ -2240,6 +2460,9 @@
         state.config.pontosDerrota = numOr(dom.cfgDerrota.value, 0);
         state.config.bonusGoleada = numOr(dom.cfgBonus.value, 1);
         state.config.golosGoleada = numOr(dom.cfgGoleada.value, 3);
+        state.config.mataMata = dom.cfgMataMata.checked;
+        state.config.numPlayoffTeams = parseInt(dom.cfgNumPlayoffTeams.value, 10) || 4;
+        state.config.numGrupos = parseInt(dom.cfgNumGrupos.value, 10) || 1;
         persistConfigTeams(); refreshComputed();
       }
 
@@ -2347,18 +2570,27 @@
 
       function onResultCommit(e) {
         var gi = e.target.dataset.gi;
-        var row = e.target.closest('.result-split');
+        var row = e.target.closest('.fixture-input') || e.target.closest('.result-split').parentNode;
         var inps = row.querySelectorAll('.res-box');
+        var penInps = row.querySelectorAll('.pen-box');
 
         var vHome = inps[0].value.trim();
         var vAway = inps[1].value.trim();
 
+        var pHome = penInps.length ? penInps[0].value.trim() : '';
+        var pAway = penInps.length ? penInps[1].value.trim() : '';
+
         if (vHome === '' && vAway === '') {
           delete state.results[gi];
           inps[0].classList.remove('input-invalid'); inps[1].classList.remove('input-invalid');
+          if (penInps.length) { penInps[0].classList.remove('input-invalid'); penInps[1].classList.remove('input-invalid'); }
         }
         else if (vHome !== '' && vAway !== '' && !isNaN(vHome) && !isNaN(vAway)) {
           var newScore = parseInt(vHome, 10) + '-' + parseInt(vAway, 10);
+          var newPenalties = undefined;
+          if (pHome !== '' && pAway !== '' && !isNaN(pHome) && !isNaN(pAway)) {
+            newPenalties = parseInt(pHome, 10) + '-' + parseInt(pAway, 10);
+          }
 
           if (!state.results[gi] || typeof state.results[gi] === 'string') {
             state.results[gi] = { score: newScore, scorers: { home: [], away: [] }, status: 'terminado' };
@@ -2367,7 +2599,34 @@
             if (state.results[gi].status === 'agendado') state.results[gi].status = 'terminado';
           }
 
+          if (newPenalties) state.results[gi].penalties = newPenalties;
+          else delete state.results[gi].penalties;
+
+          var game = state.schedule[gi];
+          if (game && game.isPlayoff && state.results[gi].status === 'terminado') {
+            var winnerIdx = null;
+            var hScore = parseInt(vHome, 10), aScore = parseInt(vAway, 10);
+            if (hScore > aScore) winnerIdx = game.home;
+            else if (aScore > hScore) winnerIdx = game.away;
+            else if (newPenalties) {
+              var ph = parseInt(pHome, 10), pa = parseInt(pAway, 10);
+              if (ph > pa) winnerIdx = game.home;
+              else if (pa > ph) winnerIdx = game.away;
+            }
+
+            if (winnerIdx !== null && game.nextMatchId) {
+              var matchParts = game.nextMatchId.split('_');
+              var targetMatchId = matchParts[0], targetSide = matchParts[1];
+              var targetGame = state.schedule.find(function (g) { return g.playoffMatchId === targetMatchId; });
+              if (targetGame) {
+                targetGame[targetSide] = winnerIdx;
+                persistSchedule();
+              }
+            }
+          }
+
           inps[0].classList.remove('input-invalid'); inps[1].classList.remove('input-invalid');
+          if (penInps.length) { penInps[0].classList.remove('input-invalid'); penInps[1].classList.remove('input-invalid'); }
         }
         else {
           if (vHome === '' || isNaN(vHome)) inps[0].classList.add('input-invalid'); else inps[0].classList.remove('input-invalid');
@@ -2388,7 +2647,7 @@
 
         function doIt() {
           state.config.numEquipas = n; state.config.numVoltas = v;
-          applyGeneratedSchedule(n, v);
+          applyGeneratedSchedule(n, v, true);
           state.results = {};
           persistConfigTeams(); persistSchedule(); persistResults(); renderAll();
           showToast('Calendário gerado: ' + state.schedule.length + ' jogos.', 'ok');
@@ -2418,6 +2677,98 @@
           state.schedule = out.schedule; state.roundsMeta = out.roundsMeta; state.scheduleVoltas = novaVolta;
           state.config.numVoltas = novaVolta; if (dom.cfgNumVoltas) dom.cfgNumVoltas.value = novaVolta;
           persistConfigTeams(); persistSchedule(); renderAll(); showToast('Volta extra adicionada!', 'ok');
+        });
+      }
+
+      function onGerarEliminatorias() {
+        var summary = computeStatsSummary();
+        var numPlayoffTeamsPerGroup = state.config.numPlayoffTeams || 4;
+        var numGrupos = state.config.numGrupos || 1;
+        var totalPlayoffTeams = numPlayoffTeamsPerGroup * numGrupos;
+
+        if (totalPlayoffTeams > 16) {
+          showToast('O sistema suporta no máximo 16 equipas no Mata-Mata. Altera as configurações.', 'error');
+          return;
+        }
+
+        var ok = true;
+        summary.groupsData.forEach(function(g) {
+          if (g.standings.length < numPlayoffTeamsPerGroup) ok = false;
+        });
+
+        if (!ok) {
+           showToast('Alguns grupos não têm equipas suficientes para apurar o Top ' + numPlayoffTeamsPerGroup + '.', 'error');
+           return;
+        }
+
+        var topTeams = [];
+        for (var pos = 0; pos < numPlayoffTeamsPerGroup; pos++) {
+           for (var g = 0; g < numGrupos; g++) {
+             topTeams.push(summary.groupsData[g].standings[pos]);
+           }
+        }
+        var numTeams = totalPlayoffTeams;
+
+        var newGames = [];
+        var newRounds = [];
+
+        if (numTeams === 2) {
+          newRounds.push({ jornada: 'Final', bye: null });
+          newGames.push({ jornada: 'Final', home: topTeams[0].idx, away: topTeams[1].idx, isPlayoff: true, playoffMatchId: 'F1', nextMatchId: null });
+        }
+        else if (numTeams === 4) {
+          newRounds.push({ jornada: 'Meias-Finais', bye: null });
+          newGames.push({ jornada: 'Meias-Finais', home: topTeams[0].idx, away: topTeams[3].idx, isPlayoff: true, playoffMatchId: 'MF1', nextMatchId: 'F1_home' });
+          newGames.push({ jornada: 'Meias-Finais', home: topTeams[1].idx, away: topTeams[2].idx, isPlayoff: true, playoffMatchId: 'MF2', nextMatchId: 'F1_away' });
+
+          newRounds.push({ jornada: 'Final', bye: null });
+          newGames.push({ jornada: 'Final', home: 'Vencedor MF1', away: 'Vencedor MF2', isPlayoff: true, playoffMatchId: 'F1', nextMatchId: null });
+        }
+        else if (numTeams === 8) {
+          newRounds.push({ jornada: 'Quartos-de-Final', bye: null });
+          newGames.push({ jornada: 'Quartos-de-Final', home: topTeams[0].idx, away: topTeams[7].idx, isPlayoff: true, playoffMatchId: 'QF1', nextMatchId: 'MF1_home' });
+          newGames.push({ jornada: 'Quartos-de-Final', home: topTeams[3].idx, away: topTeams[4].idx, isPlayoff: true, playoffMatchId: 'QF2', nextMatchId: 'MF1_away' });
+          newGames.push({ jornada: 'Quartos-de-Final', home: topTeams[1].idx, away: topTeams[6].idx, isPlayoff: true, playoffMatchId: 'QF3', nextMatchId: 'MF2_home' });
+          newGames.push({ jornada: 'Quartos-de-Final', home: topTeams[2].idx, away: topTeams[5].idx, isPlayoff: true, playoffMatchId: 'QF4', nextMatchId: 'MF2_away' });
+
+          newRounds.push({ jornada: 'Meias-Finais', bye: null });
+          newGames.push({ jornada: 'Meias-Finais', home: 'Vencedor QF1', away: 'Vencedor QF2', isPlayoff: true, playoffMatchId: 'MF1', nextMatchId: 'F1_home' });
+          newGames.push({ jornada: 'Meias-Finais', home: 'Vencedor QF3', away: 'Vencedor QF4', isPlayoff: true, playoffMatchId: 'MF2', nextMatchId: 'F1_away' });
+
+          newRounds.push({ jornada: 'Final', bye: null });
+          newGames.push({ jornada: 'Final', home: 'Vencedor MF1', away: 'Vencedor MF2', isPlayoff: true, playoffMatchId: 'F1', nextMatchId: null });
+        }
+        else if (numTeams === 16) {
+          newRounds.push({ jornada: 'Oitavos-de-Final', bye: null });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[0].idx, away: topTeams[15].idx, isPlayoff: true, playoffMatchId: 'OF1', nextMatchId: 'QF1_home' });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[7].idx, away: topTeams[8].idx, isPlayoff: true, playoffMatchId: 'OF2', nextMatchId: 'QF1_away' });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[3].idx, away: topTeams[12].idx, isPlayoff: true, playoffMatchId: 'OF3', nextMatchId: 'QF2_home' });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[4].idx, away: topTeams[11].idx, isPlayoff: true, playoffMatchId: 'OF4', nextMatchId: 'QF2_away' });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[1].idx, away: topTeams[14].idx, isPlayoff: true, playoffMatchId: 'OF5', nextMatchId: 'QF3_home' });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[6].idx, away: topTeams[9].idx, isPlayoff: true, playoffMatchId: 'OF6', nextMatchId: 'QF3_away' });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[2].idx, away: topTeams[13].idx, isPlayoff: true, playoffMatchId: 'OF7', nextMatchId: 'QF4_home' });
+          newGames.push({ jornada: 'Oitavos-de-Final', home: topTeams[5].idx, away: topTeams[10].idx, isPlayoff: true, playoffMatchId: 'OF8', nextMatchId: 'QF4_away' });
+
+          newRounds.push({ jornada: 'Quartos-de-Final', bye: null });
+          newGames.push({ jornada: 'Quartos-de-Final', home: 'Vencedor OF1', away: 'Vencedor OF2', isPlayoff: true, playoffMatchId: 'QF1', nextMatchId: 'MF1_home' });
+          newGames.push({ jornada: 'Quartos-de-Final', home: 'Vencedor OF3', away: 'Vencedor OF4', isPlayoff: true, playoffMatchId: 'QF2', nextMatchId: 'MF1_away' });
+          newGames.push({ jornada: 'Quartos-de-Final', home: 'Vencedor OF5', away: 'Vencedor OF6', isPlayoff: true, playoffMatchId: 'QF3', nextMatchId: 'MF2_home' });
+          newGames.push({ jornada: 'Quartos-de-Final', home: 'Vencedor OF7', away: 'Vencedor OF8', isPlayoff: true, playoffMatchId: 'QF4', nextMatchId: 'MF2_away' });
+
+          newRounds.push({ jornada: 'Meias-Finais', bye: null });
+          newGames.push({ jornada: 'Meias-Finais', home: 'Vencedor QF1', away: 'Vencedor QF2', isPlayoff: true, playoffMatchId: 'MF1', nextMatchId: 'F1_home' });
+          newGames.push({ jornada: 'Meias-Finais', home: 'Vencedor QF3', away: 'Vencedor QF4', isPlayoff: true, playoffMatchId: 'MF2', nextMatchId: 'F1_away' });
+
+          newRounds.push({ jornada: 'Final', bye: null });
+          newGames.push({ jornada: 'Final', home: 'Vencedor MF1', away: 'Vencedor MF2', isPlayoff: true, playoffMatchId: 'F1', nextMatchId: null });
+        }
+
+        openConfirm('🏆 Gerar Eliminatórias', 'Vão ser gerados os jogos de eliminatórias com base na classificação atual (Top ' + numTeams + '). Continuar?', function () {
+          state.schedule = state.schedule.concat(newGames);
+          state.roundsMeta = state.roundsMeta.concat(newRounds);
+          persistSchedule();
+          renderAll();
+          showToast('Eliminatórias geradas!', 'ok');
         });
       }
 
@@ -2470,6 +2821,7 @@
         dom.btnNovoTorneio.addEventListener('click', onNovoTorneio);
         dom.btnAtualizar.addEventListener('click', onAtualizar);
         dom.btnAdicionarVolta.addEventListener('click', onAdicionarVolta);
+        dom.btnGerarEliminatorias.addEventListener('click', onGerarEliminatorias);
 
         dom.btnDarkMode.addEventListener('click', function () {
           currentTheme = currentTheme === 'light' ? 'dark' : 'light';
@@ -2488,6 +2840,9 @@
         dom.cfgNome.addEventListener('blur', onConfigFieldChange);
         [dom.cfgVitoria, dom.cfgEmpate, dom.cfgDerrota, dom.cfgBonus, dom.cfgGoleada].forEach(function (el) { el.addEventListener('blur', onConfigFieldChange); });
         [dom.cfgNumEquipas, dom.cfgNumVoltas].forEach(function (el) { el.addEventListener('input', renderScheduleHint); el.addEventListener('blur', onFormatFieldChange); });
+        dom.cfgNumGrupos.addEventListener('change', function() { onConfigFieldChange(); renderScheduleHint(); });
+        dom.cfgMataMata.addEventListener('change', onConfigFieldChange);
+        dom.cfgNumPlayoffTeams.addEventListener('change', onConfigFieldChange);
 
         dom.modalCancel.addEventListener('click', closeConfirm);
         dom.modalConfirm.addEventListener('click', function () { var cb = confirmCallback; closeConfirm(); if (cb) cb(); });
