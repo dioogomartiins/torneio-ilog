@@ -710,6 +710,29 @@
       font-weight: 600;
     }
 
+    .score-btn {
+      width: 28px;
+      height: 28px;
+      border-radius: 50%;
+      border: 1px solid var(--line);
+      background: var(--paper);
+      color: var(--pitch-800);
+      font-weight: 700;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      transition: all 0.1s;
+      padding: 0;
+      line-height: 1;
+    }
+
+    .score-btn:active {
+      background: var(--line);
+      transform: scale(0.95);
+    }
+
     /* ---------- Stats ---------- */
     .stats-grid {
       display: grid;
@@ -1655,9 +1678,15 @@
               '<div class="fixture fixture-input">' +
               '<span class="fx-home">' + escapeHtml(getTeamName(g.home)) + '</span>' +
               '<div class="result-split">' +
+              '<button class="score-btn" data-gi="' + gi + '" data-side="home" data-action="sub">-</button>' +
               '<input type="number" class="input res-box" data-gi="' + gi + '" data-side="home" value="' + escapeHtml(vHome) + '" min="0" max="99" inputmode="numeric">' +
+              '<button class="score-btn" data-gi="' + gi + '" data-side="home" data-action="add">+</button>' +
+
               '<span class="res-sep">-</span>' +
+
+              '<button class="score-btn" data-gi="' + gi + '" data-side="away" data-action="sub">-</button>' +
               '<input type="number" class="input res-box" data-gi="' + gi + '" data-side="away" value="' + escapeHtml(vAway) + '" min="0" max="99" inputmode="numeric">' +
+              '<button class="score-btn" data-gi="' + gi + '" data-side="away" data-action="add">+</button>' +
               '</div>' +
               '<span class="fx-away">' + escapeHtml(getTeamName(g.away)) + '</span>' +
               '</div>'
@@ -1667,10 +1696,46 @@
         });
         dom.resultsList.innerHTML = parts.join('');
 
+        // Eventos para as caixas de texto (quando escreves manualmente)
         Array.prototype.forEach.call(dom.resultsList.querySelectorAll('.res-box'), function (inp) {
           inp.addEventListener('blur', onResultCommit);
           inp.addEventListener('keydown', function (e) { if (e.key === 'Enter') inp.blur(); });
         });
+
+        // Eventos para os botões de + e -
+        Array.prototype.forEach.call(dom.resultsList.querySelectorAll('.score-btn'), function (btn) {
+          btn.addEventListener('click', onScoreBtnClick);
+        });
+      }
+
+      function onScoreBtnClick(e) {
+        var btn = e.target;
+        var gi = btn.dataset.gi;
+        var side = btn.dataset.side;
+        var action = btn.dataset.action;
+
+        // Encontrar a caixa de input correta (home ou away) na mesma linha do botão
+        var row = btn.closest('.result-split');
+        var input = row.querySelector('input[data-side="' + side + '"]');
+        var otherInput = row.querySelector('input[data-side="' + (side === 'home' ? 'away' : 'home') + '"]');
+
+        var currentVal = parseInt(input.value, 10);
+        if (isNaN(currentVal)) currentVal = 0; // Se estiver vazio, assume 0
+
+        // Atualizar o valor dependendo do botão clicado
+        if (action === 'add') {
+          input.value = currentVal + 1;
+        } else if (action === 'sub' && currentVal > 0) {
+          input.value = currentVal - 1;
+        }
+
+        // Forçar o outro input a ter pelo menos 0 se estiver vazio (para o jogo ficar válido imediatamente)
+        if (input.value !== '' && otherInput.value === '') {
+          otherInput.value = 0;
+        }
+
+        // Disparar a lógica de gravação existente criando um evento artificial
+        onResultCommit({ target: input });
       }
 
       function renderStandingsBody(standings) {
