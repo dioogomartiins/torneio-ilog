@@ -309,7 +309,6 @@ export async function loadState() {
       state.scheduleVoltas = sc.scheduleVoltas || state.config.numVoltas;
     } else {
       applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
-      await persistSchedule();
     }
 
     state.results = rs || {};
@@ -331,9 +330,6 @@ export async function loadState() {
     state.players = [];
     state.jogosSingulares = [];
     applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
-    await persistConfigTeams();
-    await persistSchedule();
-    await persistResults();
   }
 
   if (bk && bk.exportedAt) flashBackup(bk.exportedAt);

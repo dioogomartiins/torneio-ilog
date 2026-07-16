@@ -8,15 +8,15 @@ import { initFirebaseListener, onFirebaseStateChange } from './firebase.js';
 // Handlers de configuração
 // ---------------------------------------------------------------------------
 export function onConfigFieldChange() {
-  state.config.nome            = dom.cfgNome.value.trim() || 'Torneio';
-  state.config.pontosVitoria   = numOr(dom.cfgVitoria.value, 3);
-  state.config.pontosEmpate    = numOr(dom.cfgEmpate.value, 1);
-  state.config.pontosDerrota   = numOr(dom.cfgDerrota.value, 0);
-  state.config.bonusGoleada    = numOr(dom.cfgBonus.value, 1);
-  state.config.golosGoleada    = numOr(dom.cfgGoleada.value, 3);
-  state.config.mataMata        = dom.cfgMataMata.checked;
+  state.config.nome = dom.cfgNome.value.trim() || 'Torneio';
+  state.config.pontosVitoria = numOr(dom.cfgVitoria.value, 3);
+  state.config.pontosEmpate = numOr(dom.cfgEmpate.value, 1);
+  state.config.pontosDerrota = numOr(dom.cfgDerrota.value, 0);
+  state.config.bonusGoleada = numOr(dom.cfgBonus.value, 1);
+  state.config.golosGoleada = numOr(dom.cfgGoleada.value, 3);
+  state.config.mataMata = dom.cfgMataMata.checked;
   state.config.numPlayoffTeams = parseInt(dom.cfgNumPlayoffTeams.value, 10) || 4;
-  state.config.numGrupos       = parseInt(dom.cfgNumGrupos.value, 10) || 1;
+  state.config.numGrupos = parseInt(dom.cfgNumGrupos.value, 10) || 1;
   persistConfigTeams();
   refreshComputed();
 }
@@ -48,8 +48,8 @@ export function onTeamPropChange(e) {
 
 export function onAddPlayerFromDB() {
   const tIdx = dom.squadTeamSelect.value;
-  const num  = parseInt(dom.squadPlayerNum.value, 10);
-  const pid  = dom.squadPlayerFromDB.value;
+  const num = parseInt(dom.squadPlayerNum.value, 10);
+  const pid = dom.squadPlayerFromDB.value;
 
   if (!tIdx) { showToast('Seleciona uma equipa.', 'error'); return; }
   if (isNaN(num) || num < 1) { showToast('Preenche o número da camisola.', 'error'); return; }
@@ -74,12 +74,12 @@ export function onAddPlayerFromDB() {
 }
 
 export function onSquadListClick(e) {
-  const btnDel   = e.target.closest('.player-del');
+  const btnDel = e.target.closest('.player-del');
   const btnStats = e.target.closest('.player-stats-btn');
 
   if (btnDel) {
     const tIdx = btnDel.dataset.idx;
-    const pid  = btnDel.dataset.pid;
+    const pid = btnDel.dataset.pid;
     state.squads[tIdx] = state.squads[tIdx].filter((p) => p.id !== pid);
     persistConfigTeams();
     renderSquadList();
@@ -109,13 +109,13 @@ export function onStatusBtnClick(e) {
 }
 
 export function onScoreBtnClick(e) {
-  const btn    = e.target;
-  const gi     = btn.dataset.gi;
-  const side   = btn.dataset.side;
+  const btn = e.target;
+  const gi = btn.dataset.gi;
+  const side = btn.dataset.side;
   const action = btn.dataset.action;
-  const row    = btn.closest('.result-split');
+  const row = btn.closest('.result-split');
 
-  const input      = row.querySelector(`input[data-side="${side}"]`);
+  const input = row.querySelector(`input[data-side="${side}"]`);
   const otherInput = row.querySelector(`input[data-side="${side === 'home' ? 'away' : 'home'}"]`);
 
   if (otherInput.value === '') otherInput.value = 0;
@@ -155,10 +155,10 @@ export function onScoreBtnClick(e) {
 }
 
 export function onResultCommit(e) {
-  const gi  = e.target.dataset.gi;
+  const gi = e.target.dataset.gi;
   const row = e.target.closest('.fixture-input') || e.target.closest('.result-split').parentNode;
 
-  const inps    = row.querySelectorAll('.res-box');
+  const inps = row.querySelectorAll('.res-box');
   const penInps = row.querySelectorAll('.pen-box');
 
   const vHome = inps[0].value.trim();
@@ -316,8 +316,8 @@ export function onAdicionarVolta() {
 const ROUND_CHAIN = [
   { prefix: 'OF', label: 'Oitavos-de-Final' },
   { prefix: 'QF', label: 'Quartos-de-Final' },
-  { prefix: 'MF', label: 'Meias-Finais'     },
-  { prefix: 'F',  label: 'Final'            },
+  { prefix: 'MF', label: 'Meias-Finais' },
+  { prefix: 'F', label: 'Final' },
 ];
 
 // Para N equipas, as rondas activas começam em: ROUND_CHAIN.length - log2(N)
@@ -346,7 +346,7 @@ function buildPlayoffBracket(teamCount, seeds) {
   const roundDefs = ROUND_CHAIN.slice(startIndex);
 
 
-  const games  = [];
+  const games = [];
   const rounds = [];
 
   // Ordem de seeding da 1ª ronda para evitar confrontos prematuros entre os melhores:
@@ -355,13 +355,13 @@ function buildPlayoffBracket(teamCount, seeds) {
 
   roundDefs.forEach((roundDef, roundIndex) => {
     const { prefix, label } = roundDef;
-    const next       = roundDefs[roundIndex + 1]?.prefix ?? null;
+    const next = roundDefs[roundIndex + 1]?.prefix ?? null;
     const matchCount = teamCount / Math.pow(2, roundIndex + 1);
 
     rounds.push({ jornada: label, bye: null });
 
     for (let i = 0; i < matchCount; i++) {
-      const matchId     = `${prefix}${i + 1}`;
+      const matchId = `${prefix}${i + 1}`;
       const nextMatchId = next ? `${next}${Math.floor(i / 2) + 1}_${i % 2 === 0 ? 'home' : 'away'}` : null;
 
       let home, away;
@@ -399,10 +399,10 @@ function buildFirstRoundSeeding(n) {
   // Constrói o bracket recursivamente: divide em duas metades e intercala
   function buildSlots(slots) {
     if (slots.length === 2) return [[slots[0], slots[1]]];
-    const mid  = slots.length / 2;
-    const top  = slots.slice(0, mid);
-    const bot  = slots.slice(mid).reverse();
-    const left  = top.filter((_, i) => i % 2 === 0).map((s, i) => [s, bot[i]]);
+    const mid = slots.length / 2;
+    const top = slots.slice(0, mid);
+    const bot = slots.slice(mid).reverse();
+    const left = top.filter((_, i) => i % 2 === 0).map((s, i) => [s, bot[i]]);
     const right = top.filter((_, i) => i % 2 !== 0).map((s, i) => [s, bot[mid / 2 + i]]);
     return [...buildSlots(left.flat()), ...buildSlots(right.flat())];
   }
@@ -414,8 +414,8 @@ function buildFirstRoundSeeding(n) {
 export function onGerarEliminatorias() {
   const summary = computeStatsSummary();
   const numPlayoffTeamsPerGroup = state.config.numPlayoffTeams || 4;
-  const numGrupos               = state.config.numGrupos || 1;
-  const totalPlayoffTeams       = numPlayoffTeamsPerGroup * numGrupos;
+  const numGrupos = state.config.numGrupos || 1;
+  const totalPlayoffTeams = numPlayoffTeamsPerGroup * numGrupos;
 
   if (totalPlayoffTeams > 16) {
     showToast('O sistema suporta no máximo 16 equipas no Mata-Mata. Altera as configurações.', 'error');
@@ -448,7 +448,7 @@ export function onGerarEliminatorias() {
     '🏆 Gerar Eliminatórias',
     `Vão ser gerados os jogos de eliminatórias com base na classificação atual (Top ${totalPlayoffTeams}). Continuar?`,
     () => {
-      state.schedule   = state.schedule.concat(newGames);
+      state.schedule = state.schedule.concat(newGames);
       state.roundsMeta = state.roundsMeta.concat(newRounds);
       persistSchedule();
       renderAll();
@@ -645,7 +645,7 @@ export async function init() {
     if (data) {
       applySnapshot(data);
       renderAll();
-      showToast('Dados atualizados da nuvem', 'ok');
+      //showToast('Dados atualizados da nuvem', 'ok');
     }
   });
 
