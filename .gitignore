@@ -11,3 +11,9 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 .vscode/settings.json
+
+# Node.js
+node_modules/
+
+# Vite build output
+dist/

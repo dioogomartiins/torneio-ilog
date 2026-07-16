@@ -1,0 +1,27 @@
+{
+    "name":  "torneio-ilog",
+    "version":  "1.0.0",
+    "main":  "index.js",
+    "scripts":  {
+                    "preview":  "vite preview",
+                    "build":  "vite build",
+                    "dev":  "vite"
+                },
+    "repository":  {
+                       "type":  "git",
+                       "url":  "git+https://github.com/dioogomartiins/torneio-ilog.git"
+                   },
+    "keywords":  [
+
+                 ],
+    "author":  "",
+    "license":  "ISC",
+    "bugs":  {
+                 "url":  "https://github.com/dioogomartiins/torneio-ilog/issues"
+             },
+    "homepage":  "https://github.com/dioogomartiins/torneio-ilog#readme",
+    "description":  "",
+    "devDependencies":  {
+                            "vite":  "^8.1.5"
+                        }
+}
