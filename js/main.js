@@ -1,7 +1,8 @@
-import { state, persistConfigTeams, loadState, persistSchedule, persistResults, persistBackup, persistPlayers, persistJogosSingulares, currentTheme, setCurrentTheme, exportJSON, importJSON, applyGeneratedSchedule } from './state.js';
+import { state, persistConfigTeams, loadState, persistSchedule, persistResults, persistBackup, persistPlayers, persistJogosSingulares, currentTheme, setCurrentTheme, exportJSON, importJSON, applyGeneratedSchedule, applySnapshot } from './state.js';
 import { dom, cacheDom, renderAll, refreshComputed, renderScheduleHint, renderSquadList, renderSquadsDropdown, renderCalendar, renderResults, showToast, flashSaved, openConfirm, closeConfirm, switchTab, confirmCallback, openScorerModal, openPlayerProfile, computeStatsSummary, renderPlayersList, openPlayerModal, renderSquadPlayerFromDBDropdown, renderDraftPlayerList, renderDraftTeams, renderSingularHistorico, currentDraft } from './ui.js';
 import { clamp, numOr } from './utils.js';
 import { bergerRounds, snakeDraft } from './algorithms.js';
+import { initFirebaseListener, onFirebaseStateChange } from './firebase.js';
 
 // ---------------------------------------------------------------------------
 // Handlers de configuração
@@ -638,6 +639,16 @@ export async function init() {
   cacheDom();
   bindEvents();
   await loadState();
+
+  initFirebaseListener();
+  onFirebaseStateChange((data) => {
+    if (data) {
+      applySnapshot(data);
+      renderAll();
+      showToast('Dados atualizados da nuvem', 'ok');
+    }
+  });
+
   renderAll();
   switchTab('dashboard');
 }

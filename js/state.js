@@ -1,5 +1,6 @@
 import { flashError, flashSaved, flashBackup, showToast, openConfirm, renderAll } from './ui.js';
 import { generateSchedule } from './algorithms.js';
+import { pushStateToFirebase } from './firebase.js';
 
 // ---------------------------------------------------------------------------
 // Constantes
@@ -188,6 +189,7 @@ export async function persistBackup() {
   const snap = buildSnapshot();
   await storageSet('backup', JSON.stringify(snap));
   flashBackup(snap.exportedAt);
+  pushStateToFirebase(snap);
 }
 
 export async function persistConfigTeams() {
