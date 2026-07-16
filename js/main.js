@@ -118,6 +118,8 @@ export function onScoreBtnClick(e) {
   const input      = row.querySelector(`input[data-side="${side}"]`);
   const otherInput = row.querySelector(`input[data-side="${side === 'home' ? 'away' : 'home'}"]`);
 
+  if (otherInput.value === '') otherInput.value = 0;
+
   let currentVal = parseInt(input.value, 10);
   if (isNaN(currentVal)) currentVal = 0;
 
@@ -150,8 +152,6 @@ export function onScoreBtnClick(e) {
     }
     onResultCommit({ target: input });
   }
-
-  if (otherInput.value === '') otherInput.value = 0;
 }
 
 export function onResultCommit(e) {
