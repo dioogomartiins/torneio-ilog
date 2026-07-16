@@ -839,12 +839,9 @@
       width: 100vw;
       height: 100vh;
       background: rgba(15, 42, 28, .6);
-      /* Fundo um pouco mais escuro para destaque */
       display: flex;
       align-items: center;
-      /* Centraliza verticalmente */
       justify-content: center;
-      /* Centraliza horizontalmente */
       padding: 20px;
       z-index: 1000;
     }
@@ -864,7 +861,6 @@
       overflow-y: auto;
     }
 
-    /* Garante que os botões dentro do modal têm cor e visibilidade */
     .modal .btn {
       display: block !important;
       background: var(--paper) !important;
@@ -876,7 +872,6 @@
       text-align: left !important;
     }
 
-    /* Garante que o texto dentro dos botões é visível */
     .modal button {
       opacity: 1 !important;
       visibility: visible !important;
@@ -988,6 +983,9 @@
           <div class="section-title">⚽ Estatísticas</div>
           <div class="stats-grid" id="dashboardStats"></div>
         </div>
+        <div class="card">
+          <div id="dashboardScorers"></div>
+        </div>
       </section>
 
       <!-- CONFIGURAÇÃO -->
@@ -1001,7 +999,6 @@
             </div>
           </div>
         </div>
-
         <div class="card">
           <div class="section-title">⚽ Formato do torneio</div>
           <p class="section-sub">Estes dois campos só entram em vigor depois de clicares em <strong>🔄 Gerar
@@ -1019,7 +1016,6 @@
           </div>
           <div class="hint-box" id="scheduleHint"></div>
         </div>
-
         <div class="card">
           <div class="section-title">📐 Pontuação</div>
           <div class="form-grid">
@@ -1057,14 +1053,12 @@
           <div class="section-title">👕 Gestão de Plantéis</div>
           <p class="section-sub">Seleciona uma equipa e adiciona os jogadores para acompanhares a tabela de melhores
             marcadores.</p>
-
           <div class="form-grid" style="margin-bottom: 20px;">
             <div class="field">
               <label for="squadTeamSelect">Escolher Equipa</label>
               <select id="squadTeamSelect" class="input"></select>
             </div>
           </div>
-
           <div
             style="background: #FAFBF9; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px;">
             <div class="form-grid" style="align-items: end; margin-bottom: 16px;">
@@ -1081,7 +1075,6 @@
                 </div>
               </div>
             </div>
-
             <div id="squadList"></div>
           </div>
         </div>
@@ -1154,7 +1147,6 @@
           <div class="section-title">💾 Backup e Restauro</div>
           <p class="section-sub">Guarda uma cópia de segurança do teu torneio (equipas, plantel, resultados) num
             ficheiro .json que podes importar mais tarde em qualquer dispositivo.</p>
-
           <div style="display:flex; gap:12px; margin-top: 18px; flex-wrap: wrap;">
             <button class="btn btn-teal" id="btnExportar">⬇️ Exportar JSON</button>
             <button class="btn btn-teal" id="btnImportar">⬆️ Importar JSON</button>
@@ -1164,7 +1156,6 @@
       </section>
 
     </main>
-
     <p class="foot">Dados guardados automaticamente enquanto usas esta aplicação · nenhum dado sai do teu dispositivo.
     </p>
   </div>
@@ -1187,37 +1178,20 @@
     (function () {
       "use strict";
 
-      /* =========================================================
-         SNAPSHOT VERSION — bump when schema changes
-      ========================================================= */
       var SNAPSHOT_VERSION = 2; // Atualizado para suportar plantéis
 
-      /* =========================================================
-         ESTRUTURA DE DADOS DE GOLOS
-         Agora results[gi] será um objeto: { score: "2-1", scorers: { home: [pId, pId], away: [pId] } }
-      ========================================================= */
-
-      // ... (BergerRounds e GenerateSchedule mantêm-se iguais) ...
-
-      /* =========================================================
-         MODAL DE SELEÇÃO DE MARCADOR
-      ========================================================= */
       function openScorerModal(gi, side, onSelect) {
         var game = state.schedule[gi];
-        // Garante que buscamos o ID da equipa correta (home ou away)
         var teamIdx = (side === 'home') ? game.home : game.away;
         var teamName = getTeamName(teamIdx);
 
-        // Acesso seguro ao plantel
         var players = (state.squads && state.squads[teamIdx]) ? state.squads[teamIdx] : [];
 
         dom.modalTitle.textContent = "Golo do " + teamName + ": Quem marcou?";
 
         if (players.length === 0) {
-          console.log("DEBUG: Nenhum jogador encontrado para a equipa:", teamIdx); // Verifica isto no console
           dom.modalBody.innerHTML = '<p class="empty">Nenhum jogador registado nesta equipa.</p>';
         } else {
-          console.log("DEBUG: A renderizar", players.length, "jogadores");
           dom.modalBody.innerHTML = players.map(function (p) {
             return '<button class="btn btn-ghost" data-pid="' + p.id + '">' + p.num + ' - ' + escapeHtml(p.name) + '</button>';
           }).join('');
@@ -1235,9 +1209,6 @@
         });
       }
 
-      /* =========================================================
-         BERGER ROUND-ROBIN
-      ========================================================= */
       function bergerRounds(n) {
         var teams = []; for (var i = 0; i < n; i++) teams.push(i);
         if (n % 2 !== 0) teams.push(-1);
@@ -1281,17 +1252,17 @@
         return { schedule: schedule, roundsMeta: roundsMeta };
       }
 
-      /* =========================================================
-         STANDINGS
-      ========================================================= */
       function computeStandings(teamNames, schedule, results, config) {
         var stats = teamNames.map(function (name, idx) {
           return { idx: idx, name: name, J: 0, V: 0, E: 0, D: 0, GM: 0, GS: 0, Pts: 0 };
         });
         schedule.forEach(function (game, gi) {
-          var res = results[gi];
-          if (!res) return;
-          var m = /^(\d+)-(\d+)$/.exec(String(res).trim());
+          var resObj = results[gi];
+          if (!resObj) return;
+          // Lida tanto com objetos {score:"2-1"} como com strings antigas "2-1"
+          var resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
+
+          var m = /^(\d+)-(\d+)$/.exec(resStr.trim());
           if (!m) return;
           var gc = parseInt(m[1], 10), gf = parseInt(m[2], 10);
           var home = stats[game.home], away = stats[game.away];
@@ -1334,10 +1305,12 @@
         var ids = {}; cluster.forEach(function (c) { ids[c.idx] = true; });
         var mini = {}; cluster.forEach(function (c) { mini[c.idx] = { pts: 0, gm: 0, gs: 0 }; });
         schedule.forEach(function (game, gi) {
-          var res = results[gi];
-          if (!res) return;
+          var resObj = results[gi];
+          if (!resObj) return;
           if (!ids[game.home] || !ids[game.away]) return;
-          var m = /^(\d+)-(\d+)$/.exec(String(res).trim());
+          var resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
+
+          var m = /^(\d+)-(\d+)$/.exec(resStr.trim());
           if (!m) return;
           var gc = parseInt(m[1], 10), gf = parseInt(m[2], 10);
           mini[game.home].gm += gc; mini[game.home].gs += gf;
@@ -1357,18 +1330,12 @@
         });
       }
 
-      /* =========================================================
-         STATE
-      ========================================================= */
       var state = {
         config: null, teams: null, squads: null,
         schedule: [], roundsMeta: [], scheduleTeamCount: 0, scheduleVoltas: 0,
         results: {}
       };
 
-      /* =========================================================
-         STORAGE ABSTRACTION
-      ========================================================= */
       var memoryFallback = {};
       var storageWarned = false;
       var noStorage = (typeof window.localStorage === 'undefined');
@@ -1397,9 +1364,6 @@
         catch (e) { flashError(); return null; }
       }
 
-      /* =========================================================
-         DEFAULTS
-      ========================================================= */
       function defaultConfig() {
         return {
           nome: 'Torneio 2026', numEquipas: 8, numVoltas: 2,
@@ -1428,9 +1392,6 @@
         return out;
       }
 
-      /* =========================================================
-         SNAPSHOT — build / validate / apply
-      ========================================================= */
       function buildSnapshot() {
         return {
           version: SNAPSHOT_VERSION,
@@ -1465,9 +1426,6 @@
         state.results = s.results || {};
       }
 
-      /* =========================================================
-         PERSISTENCE
-      ========================================================= */
       async function persistBackup() {
         var snap = buildSnapshot();
         await storageSet('backup', JSON.stringify(snap));
@@ -1501,9 +1459,6 @@
         state.scheduleVoltas = numVoltas;
       }
 
-      /* =========================================================
-         LOAD STATE
-      ========================================================= */
       async function loadState() {
         var ct = null, sc = null, rs = null, bk = null;
         try { var r1 = await storageGet('config-teams'); ct = r1 ? JSON.parse(r1.value) : null; } catch (e) { ct = null; }
@@ -1553,9 +1508,6 @@
         if (bk && bk.exportedAt) flashBackup(bk.exportedAt);
       }
 
-      /* =========================================================
-         EXPORT / IMPORT
-      ========================================================= */
       function exportJSON() {
         var snap = buildSnapshot();
         var json = JSON.stringify(snap, null, 2);
@@ -1609,9 +1561,6 @@
         reader.readAsText(file);
       }
 
-      /* =========================================================
-         HELPERS
-      ========================================================= */
       function getTeamName(idx) {
         var raw = (state.teams[idx] || '').trim();
         return raw || ('Equipa ' + (idx + 1));
@@ -1641,8 +1590,11 @@
         var teams = getActiveTeamNames();
         var standings = computeStandings(teams, state.schedule, state.results, state.config);
         var total = state.schedule.length;
+
         var playedKeys = Object.keys(state.results).filter(function (k) {
-          return /^\d+-\d+$/.test(String(state.results[k] || '').trim());
+          var val = state.results[k];
+          var scoreStr = val ? (typeof val === 'object' ? val.score : String(val)) : '';
+          return /^\d+-\d+$/.test(scoreStr.trim());
         });
         var played = playedKeys.length;
         var totalGoals = standings.reduce(function (s, t) { return s + t.GM; }, 0);
@@ -1660,13 +1612,15 @@
 
         var biggestWin = null;
         state.schedule.forEach(function (g, gi) {
-          var res = state.results[gi];
-          if (!res) return;
-          var m = /^(\d+)-(\d+)$/.exec(String(res).trim());
+          var resObj = state.results[gi];
+          if (!resObj) return;
+          var resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
+
+          var m = /^(\d+)-(\d+)$/.exec(resStr.trim());
           if (!m) return;
           var gc = +m[1], gf = +m[2], diff = Math.abs(gc - gf);
           if (!biggestWin || diff > biggestWin.diff) {
-            biggestWin = { diff: diff, text: getTeamName(g.home) + ' ' + res + ' ' + getTeamName(g.away) };
+            biggestWin = { diff: diff, text: getTeamName(g.home) + ' ' + resStr + ' ' + getTeamName(g.away) };
           }
         });
 
@@ -1695,9 +1649,6 @@
         };
       }
 
-      /* =========================================================
-         DOM CACHE
-      ========================================================= */
       var dom = {};
       function cacheDom() {
         ['tournamentTitle', 'savePill', 'backupPill', 'marqueeTicker',
@@ -1706,7 +1657,7 @@
           'dashboardPodium', 'dashboardStandings', 'dashboardStats',
           'cfgNome', 'cfgNumEquipas', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
           'teamsList',
-          'squadTeamSelect', 'squadPlayerNum', 'squadPlayerName', 'btnAddPlayer', 'squadList', /* NEW */
+          'squadTeamSelect', 'squadPlayerNum', 'squadPlayerName', 'btnAddPlayer', 'squadList',
           'calendarList', 'resultsList', 'standingsBody', 'statsGrid',
           'modalOverlay', 'modalTitle', 'modalBody', 'modalCancel', 'modalConfirm', 'toastRoot'
         ].forEach(function (id) { dom[id] = document.getElementById(id); });
@@ -1714,9 +1665,6 @@
         dom.panels = Array.prototype.slice.call(document.querySelectorAll('.panel'));
       }
 
-      /* =========================================================
-         RENDER
-      ========================================================= */
       function renderAll() {
         populateConfigForm();
         renderTeams();
@@ -1800,7 +1748,6 @@
           return;
         }
 
-        // Clonar para não ordenar diretamente o array no state (boas práticas)
         var sortedSquad = squad.slice().sort(function (a, b) { return a.num - b.num; });
 
         var html = sortedSquad.map(function (p) {
@@ -1858,11 +1805,13 @@
           parts.push('<div class="round-card"><div class="round-head">Jornada ' + j + '</div><div class="round-games">');
           games.forEach(function (item) {
             var g = item.g, gi = item.gi;
-            var val = state.results[gi] || '';
-            var vHome = '', vAway = '';
 
-            if (val) {
-              var m = /^(\d+)-(\d+)$/.exec(val);
+            var val = state.results[gi];
+            var vHome = '', vAway = '';
+            var scoreStr = val ? (typeof val === 'object' ? val.score : String(val)) : '';
+
+            if (scoreStr) {
+              var m = /^(\d+)-(\d+)$/.exec(scoreStr);
               if (m) { vHome = m[1]; vAway = m[2]; }
             }
 
@@ -1934,7 +1883,18 @@
         }).join('');
       }
 
-      function renderStatsGrid(summary) { dom.statsGrid.innerHTML = statCardsHtml(summary); }
+      function renderStatsGrid(summary) {
+        var scorers = computeScorerStats().slice(0, 10);
+        var html = statCardsHtml(summary);
+
+        // Adicionar secção de marcadores à grid com a equipa
+        html += '<div class="card" style="grid-column: span 3;"><div class="section-title">👟 Tabela de Marcadores</div>' +
+          (scorers.length ? scorers.map(function (s) {
+            return '<div style="padding:6px 0; border-bottom:1px solid #eee;"><strong>' + s.count + '</strong> golos — ' + escapeHtml(s.name) + ' <span style="color:var(--ink-faint); font-size:13px;">(' + escapeHtml(s.team) + ')</span></div>';
+          }).join('') : '<p class="empty">Nenhum golo registado ainda.</p>') + '</div>';
+
+        dom.statsGrid.innerHTML = html;
+      }
 
       function renderDashboard(summary) {
         dom.tournamentTitle.textContent = (state.config.nome || 'Torneio').toUpperCase();
@@ -1957,6 +1917,18 @@
           dom.dashboardStandings.innerHTML = '';
         }
         dom.dashboardStats.innerHTML = statCardsHtml(summary);
+
+        var scorers = computeScorerStats().slice(0, 5);
+        if (scorers.length > 0) {
+          var scorerHtml = scorers.map(function (s, i) {
+            return '<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line);">' +
+              '<span>' + (i + 1) + '. ' + escapeHtml(s.name) + ' <span style="color:var(--ink-faint); font-size:12px;">(' + escapeHtml(s.team) + ')</span></span>' +
+              '<span style="font-weight:700;">' + s.count + ' golos</span></div>';
+          }).join('');
+        } else {
+          var scorerHtml = '<p class="empty" style="padding-top:20px;">Nenhum golo registado ainda.</p>';
+        }
+        document.getElementById('dashboardScorers').innerHTML = '<div class="section-title" style="margin-top:20px;">👟 Top Marcadores</div>' + scorerHtml;
       }
 
       function updateTicker(summary) {
@@ -1964,9 +1936,6 @@
         dom.marqueeTicker.textContent = 'JORNADA ' + summary.currentRound + ' / ' + summary.totalRounds + '   ·   ' + summary.played + '/' + summary.total + ' JOGOS DISPUTADOS';
       }
 
-      /* =========================================================
-         EVENT HANDLERS
-      ========================================================= */
       function onConfigFieldChange() {
         state.config.nome = dom.cfgNome.value.trim() || 'Torneio';
         state.config.pontosVitoria = numOr(dom.cfgVitoria.value, 3);
@@ -1977,6 +1946,7 @@
         persistConfigTeams();
         refreshComputed();
       }
+
       function onFormatFieldChange() {
         var n = clamp(parseInt(dom.cfgNumEquipas.value, 10) || state.config.numEquipas, 2, 32);
         var v = clamp(parseInt(dom.cfgNumVoltas.value, 10) || state.config.numVoltas, 1, 20);
@@ -2036,33 +2006,40 @@
 
         var row = btn.closest('.result-split');
         var input = row.querySelector('input[data-side="' + side + '"]');
-        var currentVal = parseInt(input.value, 10) || 0;
+        var otherInput = row.querySelector('input[data-side="' + (side === 'home' ? 'away' : 'home') + '"]');
+
+        var currentVal = parseInt(input.value, 10);
+        if (isNaN(currentVal)) currentVal = 0;
 
         if (action === 'add') {
           openScorerModal(gi, side, function (pid) {
             input.value = currentVal + 1;
 
-            // Inicialização segura
             if (!state.results[gi] || typeof state.results[gi] === 'string') {
               state.results[gi] = { score: "0-0", scorers: { home: [], away: [] } };
             }
 
             state.results[gi].scorers[side].push(pid);
-            // Atualiza a string do score para manter compatibilidade
+
             var h = (side === 'home') ? input.value : (row.querySelector('input[data-side="home"]').value || 0);
             var a = (side === 'away') ? input.value : (row.querySelector('input[data-side="away"]').value || 0);
             state.results[gi].score = h + '-' + a;
 
             onResultCommit({ target: input });
           });
-        } else if (action === 'sub' && currentVal > 0) {
-          input.value = currentVal - 1;
-          // Remover o último marcador se existir
-          if (state.results[gi] && state.results[gi].scorers && state.results[gi].scorers[side].length > 0) {
-            state.results[gi].scorers[side].pop();
+        } else if (action === 'sub') {
+          if (currentVal <= 0) {
+            input.value = 0;
+          } else {
+            input.value = currentVal - 1;
+            if (state.results[gi] && state.results[gi].scorers && state.results[gi].scorers[side].length > 0) {
+              state.results[gi].scorers[side].pop();
+            }
           }
           onResultCommit({ target: input });
         }
+
+        if (otherInput.value === '') otherInput.value = 0;
       }
 
       function onResultCommit(e) {
@@ -2079,7 +2056,14 @@
           inps[1].classList.remove('input-invalid');
         }
         else if (vHome !== '' && vAway !== '' && !isNaN(vHome) && !isNaN(vAway)) {
-          state.results[gi] = parseInt(vHome, 10) + '-' + parseInt(vAway, 10);
+          var newScore = parseInt(vHome, 10) + '-' + parseInt(vAway, 10);
+
+          if (!state.results[gi] || typeof state.results[gi] === 'string') {
+            state.results[gi] = { score: newScore, scorers: { home: [], away: [] } };
+          } else {
+            state.results[gi].score = newScore;
+          }
+
           inps[0].classList.remove('input-invalid');
           inps[1].classList.remove('input-invalid');
         }
@@ -2091,6 +2075,46 @@
 
         persistResults();
         refreshComputed();
+      }
+
+      /* =========================================================
+        ESTATÍSTICAS DE MARCADORES
+      ========================================================= */
+      function computeScorerStats() {
+        var stats = {}; // { playerId: { name: "", team: "", count: 0 } }
+
+        // 1. Percorrer todos os resultados guardados
+        Object.keys(state.results).forEach(function (gi) {
+          var res = state.results[gi];
+          if (!res || typeof res !== 'object' || !res.scorers) return;
+
+          // Processar golos de ambos os lados
+          ['home', 'away'].forEach(function (side) {
+            if (!res.scorers[side]) return;
+            res.scorers[side].forEach(function (pId) {
+              if (!stats[pId]) {
+                var playerName = "Jogador Desconhecido";
+                var playerTeam = "Sem Equipa";
+                
+                // Procurar o jogador nos plantéis para descobrir o nome e a equipa
+                state.squads.forEach(function (squad, teamIndex) {
+                  var p = squad.find(function (player) { return player.id === pId; });
+                  if (p) {
+                    playerName = p.name;
+                    playerTeam = getTeamName(teamIndex); // Obtém o nome da equipa
+                  }
+                });
+                stats[pId] = { name: playerName, team: playerTeam, count: 0 };
+              }
+              stats[pId].count++;
+            });
+          });
+        });
+
+        // 2. Converter para array e ordenar
+        return Object.keys(stats).map(function (id) {
+          return { name: stats[id].name, team: stats[id].team, count: stats[id].count };
+        }).sort(function (a, b) { return b.count - a.count; });
       }
 
       function onGerarCalendario() {
@@ -2157,7 +2181,6 @@
         );
       }
 
-      /* ---------- Modal ---------- */
       var confirmCallback = null;
       function openConfirm(title, body, onConfirm) {
         dom.modalTitle.textContent = title;
@@ -2171,7 +2194,6 @@
         confirmCallback = null;
       }
 
-      /* ---------- Toast / save pill / backup pill ---------- */
       function showToast(msg, type) {
         var t = document.createElement('div');
         t.className = 'toast' + (type === 'error' ? ' toast-error' : type === 'ok' ? ' toast-ok' : '');
@@ -2204,9 +2226,6 @@
         dom.backupPill.classList.add('pill-fresh');
       }
 
-      /* =========================================================
-         BIND + INIT
-      ========================================================= */
       function switchTab(name) {
         dom.tabs.forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
         dom.panels.forEach(function (p) { p.classList.toggle('active', p.id === 'tab-' + name); });
@@ -2219,15 +2238,12 @@
         dom.btnGerarCalendario.addEventListener('click', onGerarCalendario);
         dom.btnNovoTorneio.addEventListener('click', onNovoTorneio);
         dom.btnAtualizar.addEventListener('click', onAtualizar);
-
         dom.btnAdicionarVolta.addEventListener('click', onAdicionarVolta);
 
-        /* Plantéis */
         dom.squadTeamSelect.addEventListener('change', renderSquadList);
         dom.btnAddPlayer.addEventListener('click', onAddPlayer);
         dom.squadList.addEventListener('click', onRemovePlayer);
 
-        /* Export / Import */
         dom.btnExportar.addEventListener('click', exportJSON);
         dom.btnImportar.addEventListener('click', function () { dom.inputImportar.value = ''; dom.inputImportar.click(); });
         dom.inputImportar.addEventListener('change', function () { importJSON(dom.inputImportar.files[0]); });
