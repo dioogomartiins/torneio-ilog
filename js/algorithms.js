@@ -1,170 +1,247 @@
 import { state } from './state.js';
 import { getTeamName } from './utils.js';
 
+// ---------------------------------------------------------------------------
+// Constantes de status de jogo
+// ---------------------------------------------------------------------------
+export const GAME_STATUS = Object.freeze({
+  AGENDADO: 'agendado',
+  DECORRER: 'decorrer',
+  TERMINADO: 'terminado',
+});
+
+// ---------------------------------------------------------------------------
+// Algoritmo de Berger (round-robin)
+// ---------------------------------------------------------------------------
 export function bergerRounds(n) {
-        var teams = []; for (var i = 0; i < n; i++) teams.push(i);
-        if (n % 2 !== 0) teams.push(-1);
-        var total = teams.length;
-        var rounds = [];
-        var fixed = teams[0];
-        var rest = teams.slice(1);
-        for (var r = 0; r < total - 1; r++) {
-          var l = [fixed].concat(rest);
-          var pairs = []; var bye = null;
-          for (var k = 0; k < total / 2; k++) {
-            var t1 = l[k], t2 = l[total - 1 - k];
-            if (r % 2 === 1) { var tmp = t1; t1 = t2; t2 = tmp; }
-            if (t1 === -1) bye = t2;
-            else if (t2 === -1) bye = t1;
-            else pairs.push([t1, t2]);
-          }
-          rounds.push({ pairs: pairs, bye: bye });
-          rest = [rest[rest.length - 1]].concat(rest.slice(0, -1));
-        }
-        return rounds;
+  const teams = [];
+  for (let i = 0; i < n; i++) teams.push(i);
+  if (n % 2 !== 0) teams.push(-1); // bye slot
+
+  const total = teams.length;
+  const fixed = teams[0];
+  let rest = teams.slice(1);
+  const rounds = [];
+
+  for (let r = 0; r < total - 1; r++) {
+    const l = [fixed, ...rest];
+    const pairs = [];
+    let bye = null;
+
+    for (let k = 0; k < total / 2; k++) {
+      let t1 = l[k];
+      let t2 = l[total - 1 - k];
+
+      if (r % 2 === 1) {
+        [t1, t2] = [t2, t1];
       }
 
-      export function generateSchedule(groupsIndices, numVoltas) {
-        var schedule = [];
-        var roundsMeta = [];
-        var nGrupos = groupsIndices.length;
-        
-        var maxRoundsPerVolta = 0;
-        var groupBergerRounds = [];
-        for (var g = 0; g < nGrupos; g++) {
-          var bRounds = bergerRounds(groupsIndices[g].length);
-          groupBergerRounds.push(bRounds);
-          if (bRounds.length > maxRoundsPerVolta) maxRoundsPerVolta = bRounds.length;
+      if (t1 === -1) bye = t2;
+      else if (t2 === -1) bye = t1;
+      else pairs.push([t1, t2]);
+    }
+
+    rounds.push({ pairs, bye });
+    rest = [rest[rest.length - 1], ...rest.slice(0, -1)];
+  }
+
+  return rounds;
+}
+
+// ---------------------------------------------------------------------------
+// Geração do calendário completo (liga + grupos + voltas)
+// ---------------------------------------------------------------------------
+export function generateSchedule(groupsIndices, numVoltas) {
+  const schedule = [];
+  const roundsMeta = [];
+  const nGrupos = groupsIndices.length;
+
+  let maxRoundsPerVolta = 0;
+  const groupBergerRounds = groupsIndices.map((group) => {
+    const bRounds = bergerRounds(group.length);
+    if (bRounds.length > maxRoundsPerVolta) maxRoundsPerVolta = bRounds.length;
+    return bRounds;
+  });
+
+  let jornada = 1;
+
+  for (let v = 0; v < numVoltas; v++) {
+    const mirror = v % 2 === 1;
+
+    for (let ri = 0; ri < maxRoundsPerVolta; ri++) {
+      const roundByes = [];
+
+      for (let g = 0; g < nGrupos; g++) {
+        if (ri >= groupBergerRounds[g].length) continue;
+
+        const round = groupBergerRounds[g][ri];
+
+        for (const pair of round.pairs) {
+          const t1 = pair[0] === -1 ? -1 : groupsIndices[g][pair[0]];
+          const t2 = pair[1] === -1 ? -1 : groupsIndices[g][pair[1]];
+          const home = mirror ? t2 : t1;
+          const away = mirror ? t1 : t2;
+          schedule.push({ jornada, home, away, group: g });
         }
 
-        var jornada = 1;
-        for (var v = 0; v < numVoltas; v++) {
-          var mirror = v % 2 === 1;
-          for (var ri = 0; ri < maxRoundsPerVolta; ri++) {
-            var roundByes = [];
-            for (var g = 0; g < nGrupos; g++) {
-               if (ri < groupBergerRounds[g].length) {
-                 var round = groupBergerRounds[g][ri];
-                 for (var pi = 0; pi < round.pairs.length; pi++) {
-                   var pair = round.pairs[pi];
-                   var t1 = pair[0] === -1 ? -1 : groupsIndices[g][pair[0]];
-                   var t2 = pair[1] === -1 ? -1 : groupsIndices[g][pair[1]];
-                   var home = mirror ? t2 : t1;
-                   var away = mirror ? t1 : t2;
-                   schedule.push({ jornada: jornada, home: home, away: away, group: g });
-                 }
-                 if (round.bye !== null) {
-                   roundByes.push(groupsIndices[g][round.bye]);
-                 }
-               }
-            }
-            roundsMeta.push({ jornada: jornada, bye: roundByes.length ? roundByes.join(', ') : null });
-            jornada++;
-          }
+        if (round.bye !== null) {
+          roundByes.push(groupsIndices[g][round.bye]);
         }
-        return { schedule: schedule, roundsMeta: roundsMeta };
       }
 
-      export function computeStandings(teamsArray, schedule, results, config) {
-        var nGrupos = config.numGrupos || 1;
-        var groupStats = [];
-        for (var g = 0; g < nGrupos; g++) {
-           groupStats.push({
-             name: nGrupos > 1 ? 'Grupo ' + String.fromCharCode(65 + g) : 'Classificação Geral',
-             standings: []
-           });
-        }
+      roundsMeta.push({ jornada, bye: roundByes.length ? roundByes.join(', ') : null });
+      jornada++;
+    }
+  }
 
-        var stats = teamsArray.map(function (t, idx) {
-          var name = typeof t === 'string' ? t : (t && t.name ? t.name : ('Equipa ' + (idx + 1)));
-          return { idx: idx, name: name, J: 0, V: 0, E: 0, D: 0, GM: 0, GS: 0, Pts: 0 };
-        });
+  return { schedule, roundsMeta };
+}
 
-        schedule.forEach(function (game, gi) {
-          if (game.isPlayoff) return;
-          var resObj = results[gi];
-          if (!resObj) return;
-          var resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
+// ---------------------------------------------------------------------------
+// Cálculo de classificação (standings) por grupo
+// ---------------------------------------------------------------------------
+export function computeStandings(teamsArray, schedule, results, config) {
+  const nGrupos = config.numGrupos || 1;
+  const groupStats = [];
 
-          var m = /^(\d+)-(\d+)$/.exec(resStr.trim());
-          if (!m) return;
-          var gc = parseInt(m[1], 10), gf = parseInt(m[2], 10);
-          var home = stats[game.home], away = stats[game.away];
-          if (!home || !away) return;
+  for (let g = 0; g < nGrupos; g++) {
+    groupStats.push({
+      name: nGrupos > 1 ? `Grupo ${String.fromCharCode(65 + g)}` : 'Classificação Geral',
+      standings: [],
+    });
+  }
 
-          if (typeof resObj === 'object' && resObj.status === 'agendado') return;
+  const stats = teamsArray.map((t, idx) => {
+    const name = typeof t === 'string' ? t : (t && t.name ? t.name : `Equipa ${idx + 1}`);
+    return { idx, name, J: 0, V: 0, E: 0, D: 0, GM: 0, GS: 0, Pts: 0 };
+  });
 
-          home.J++; away.J++;
-          home.GM += gc; home.GS += gf;
-          away.GM += gf; away.GS += gc;
-          if (gc > gf) {
-            home.V++; away.D++;
-            home.Pts += config.pontosVitoria + (gc >= config.golosGoleada ? config.bonusGoleada : 0);
-            away.Pts += config.pontosDerrota;
-          } else if (gc < gf) {
-            away.V++; home.D++;
-            away.Pts += config.pontosVitoria + (gf >= config.golosGoleada ? config.bonusGoleada : 0);
-            home.Pts += config.pontosDerrota;
-          } else {
-            home.E++; away.E++;
-            home.Pts += config.pontosEmpate;
-            away.Pts += config.pontosEmpate;
-          }
-        });
-        stats.forEach(function (s) { s.DG = s.GM - s.GS; });
+  schedule.forEach((game, gi) => {
+    if (game.isPlayoff) return;
 
-        stats.forEach(function (s) {
-           var t = teamsArray[s.idx];
-           var g = t && t.group !== undefined ? t.group : 0;
-           if (g >= nGrupos) g = nGrupos - 1;
-           groupStats[g].standings.push(s);
-        });
+    const resObj = results[gi];
+    if (!resObj) return;
 
-        groupStats.forEach(function(group) {
-          var arr = group.standings.sort(function (a, b) {
-            return (b.Pts - a.Pts) || (b.DG - a.DG) || (b.GM - a.GM);
-          });
-          var finalArr = []; var i = 0;
-          while (i < arr.length) {
-            var j = i + 1;
-            while (j < arr.length && arr[j].Pts === arr[i].Pts && arr[j].DG === arr[i].DG && arr[j].GM === arr[i].GM) j++;
-            var cluster = arr.slice(i, j);
-            if (cluster.length > 1) cluster = resolveHeadToHead(cluster, schedule, results, config);
-            finalArr = finalArr.concat(cluster);
-            i = j;
-          }
-          group.standings = finalArr;
-        });
-        
-        return groupStats;
-      }
+    if (typeof resObj === 'object' && resObj.status === GAME_STATUS.AGENDADO) return;
 
-      export function resolveHeadToHead(cluster, schedule, results, config) {
-        var ids = {}; cluster.forEach(function (c) { ids[c.idx] = true; });
-        var mini = {}; cluster.forEach(function (c) { mini[c.idx] = { pts: 0, gm: 0, gs: 0 }; });
-        schedule.forEach(function (game, gi) {
-          var resObj = results[gi];
-          if (!resObj) return;
-          if (typeof resObj === 'object' && resObj.status === 'agendado') return;
-          if (!ids[game.home] || !ids[game.away]) return;
+    const resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
+    const m = /^(\d+)-(\d+)$/.exec(resStr.trim());
+    if (!m) return;
 
-          var resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
-          var m = /^(\d+)-(\d+)$/.exec(resStr.trim());
-          if (!m) return;
-          var gc = parseInt(m[1], 10), gf = parseInt(m[2], 10);
-          mini[game.home].gm += gc; mini[game.home].gs += gf;
-          mini[game.away].gm += gf; mini[game.away].gs += gc;
-          if (gc > gf) mini[game.home].pts += config.pontosVitoria + (gc >= config.golosGoleada ? config.bonusGoleada : 0);
-          else if (gc < gf) mini[game.away].pts += config.pontosVitoria + (gf >= config.golosGoleada ? config.bonusGoleada : 0);
-          else { mini[game.home].pts += config.pontosEmpate; mini[game.away].pts += config.pontosEmpate; }
-        });
-        return cluster.slice().sort(function (a, b) {
-          var ma = mini[a.idx], mb = mini[b.idx];
-          if (mb.pts !== ma.pts) return mb.pts - ma.pts;
-          var dgA = ma.gm - ma.gs, dgB = mb.gm - mb.gs;
-          if (dgB !== dgA) return dgB - dgA;
-          if (mb.gm !== ma.gm) return mb.gm - ma.gm;
-          if (a.GS !== b.GS) return a.GS - b.GS;
-          return a.name.localeCompare(b.name);
-        });
-      }
+    const gc = parseInt(m[1], 10);
+    const gf = parseInt(m[2], 10);
+    const home = stats[game.home];
+    const away = stats[game.away];
+    if (!home || !away) return;
+
+    home.J++;
+    away.J++;
+    home.GM += gc;
+    home.GS += gf;
+    away.GM += gf;
+    away.GS += gc;
+
+    if (gc > gf) {
+      home.V++;
+      away.D++;
+      home.Pts += config.pontosVitoria + (gc >= config.golosGoleada ? config.bonusGoleada : 0);
+      away.Pts += config.pontosDerrota;
+    } else if (gc < gf) {
+      away.V++;
+      home.D++;
+      away.Pts += config.pontosVitoria + (gf >= config.golosGoleada ? config.bonusGoleada : 0);
+      home.Pts += config.pontosDerrota;
+    } else {
+      home.E++;
+      away.E++;
+      home.Pts += config.pontosEmpate;
+      away.Pts += config.pontosEmpate;
+    }
+  });
+
+  stats.forEach((s) => { s.DG = s.GM - s.GS; });
+
+  stats.forEach((s) => {
+    const t = teamsArray[s.idx];
+    let g = t && t.group !== undefined ? t.group : 0;
+    if (g >= nGrupos) g = nGrupos - 1;
+    groupStats[g].standings.push(s);
+  });
+
+  groupStats.forEach((group) => {
+    const sorted = group.standings.sort((a, b) =>
+      (b.Pts - a.Pts) || (b.DG - a.DG) || (b.GM - a.GM)
+    );
+
+    let finalArr = [];
+    let i = 0;
+    while (i < sorted.length) {
+      let j = i + 1;
+      while (
+        j < sorted.length &&
+        sorted[j].Pts === sorted[i].Pts &&
+        sorted[j].DG === sorted[i].DG &&
+        sorted[j].GM === sorted[i].GM
+      ) j++;
+
+      let cluster = sorted.slice(i, j);
+      if (cluster.length > 1) cluster = resolveHeadToHead(cluster, schedule, results, config);
+      finalArr = finalArr.concat(cluster);
+      i = j;
+    }
+
+    group.standings = finalArr;
+  });
+
+  return groupStats;
+}
+
+// ---------------------------------------------------------------------------
+// Desempate por confronto direto (head-to-head)
+// ---------------------------------------------------------------------------
+export function resolveHeadToHead(cluster, schedule, results, config) {
+  const ids = {};
+  cluster.forEach((c) => { ids[c.idx] = true; });
+
+  const mini = {};
+  cluster.forEach((c) => { mini[c.idx] = { pts: 0, gm: 0, gs: 0 }; });
+
+  schedule.forEach((game, gi) => {
+    const resObj = results[gi];
+    if (!resObj) return;
+    if (typeof resObj === 'object' && resObj.status === GAME_STATUS.AGENDADO) return;
+    if (!ids[game.home] || !ids[game.away]) return;
+
+    const resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
+    const m = /^(\d+)-(\d+)$/.exec(resStr.trim());
+    if (!m) return;
+
+    const gc = parseInt(m[1], 10);
+    const gf = parseInt(m[2], 10);
+    mini[game.home].gm += gc;
+    mini[game.home].gs += gf;
+    mini[game.away].gm += gf;
+    mini[game.away].gs += gc;
+
+    if (gc > gf) {
+      mini[game.home].pts += config.pontosVitoria + (gc >= config.golosGoleada ? config.bonusGoleada : 0);
+    } else if (gc < gf) {
+      mini[game.away].pts += config.pontosVitoria + (gf >= config.golosGoleada ? config.bonusGoleada : 0);
+    } else {
+      mini[game.home].pts += config.pontosEmpate;
+      mini[game.away].pts += config.pontosEmpate;
+    }
+  });
+
+  return cluster.slice().sort((a, b) => {
+    const ma = mini[a.idx];
+    const mb = mini[b.idx];
+    if (mb.pts !== ma.pts) return mb.pts - ma.pts;
+    const dgA = ma.gm - ma.gs;
+    const dgB = mb.gm - mb.gs;
+    if (dgB !== dgA) return dgB - dgA;
+    if (mb.gm !== ma.gm) return mb.gm - ma.gm;
+    if (a.GS !== b.GS) return a.GS - b.GS;
+    return a.name.localeCompare(b.name);
+  });
+}

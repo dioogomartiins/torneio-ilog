@@ -1,237 +1,346 @@
-import { flashError, flashSaved, flashBackup, showToast, openConfirm } from './ui.js';
-import { renderAll } from './ui.js';
+import { flashError, flashSaved, flashBackup, showToast, openConfirm, renderAll } from './ui.js';
 import { generateSchedule } from './algorithms.js';
-import { getTeamName } from './utils.js';
 
-export var SNAPSHOT_VERSION = 4; // Atualizado para suportar Player Profiles sem emoji
+// ---------------------------------------------------------------------------
+// Constantes
+// ---------------------------------------------------------------------------
+export const SNAPSHOT_VERSION = 4;
+export const MAX_TEAMS = 32;
+const DEFAULT_COLOR = '#2F7A4F';
 
-      // GESTÃO DO TEMA (DARK MODE)
-      export let currentTheme = localStorage.getItem('torneio_theme') || 'light';
+// ---------------------------------------------------------------------------
+// Tema (dark mode)
+// ---------------------------------------------------------------------------
+export let currentTheme = localStorage.getItem('torneio_theme') || 'light';
 export function setCurrentTheme(t) { currentTheme = t; }
 
+// ---------------------------------------------------------------------------
+// Estrutura de dados por defeito
+// ---------------------------------------------------------------------------
+export function defaultConfig() {
+  return {
+    nome: 'Torneio 2026',
+    numEquipas: 8,
+    numGrupos: 1,
+    numVoltas: 2,
+    pontosVitoria: 3,
+    pontosEmpate: 1,
+    pontosDerrota: 0,
+    bonusGoleada: 1,
+    golosGoleada: 3,
+    mataMata: false,
+    numPlayoffTeams: 4,
+  };
+}
+
 export function ensureTeamsStructure(arr) {
-        var out = (arr || []).slice(0, 32).map(function (t, i) {
-          if (typeof t === 'object' && t !== null && t.name !== undefined) {
-             var obj = { name: t.name, color: t.color || '#2F7A4F' };
-             if (t.group !== undefined) obj.group = t.group;
-             return obj;
-          }
-          return { name: (typeof t === 'string' ? t : ('Equipa ' + (i + 1))), color: '#2F7A4F' };
-        });
-        while (out.length < 32) {
-          out.push({ name: '', color: '#2F7A4F' });
-        }
-        return out;
-      }
+  const out = (arr || []).slice(0, MAX_TEAMS).map((t, i) => {
+    if (typeof t === 'object' && t !== null && t.name !== undefined) {
+      const obj = { name: t.name, color: t.color || DEFAULT_COLOR };
+      if (t.group !== undefined) obj.group = t.group;
+      return obj;
+    }
+    return { name: (typeof t === 'string' ? t : `Equipa ${i + 1}`), color: DEFAULT_COLOR };
+  });
 
-export var state = {
-        config: null, teams: null, squads: null,
-        schedule: [], roundsMeta: [], scheduleTeamCount: 0, scheduleVoltas: 0,
-        results: {}
-      };
+  while (out.length < MAX_TEAMS) {
+    out.push({ name: '', color: DEFAULT_COLOR });
+  }
 
-      var memoryFallback = {};
-      var storageWarned = false;
-      var noStorage = (typeof window.localStorage === 'undefined');
+  return out;
+}
 
-      export function warnNoStorage() {
-        if (storageWarned) return;
-        storageWarned = true;
-        showToast('O teu navegador bloqueia a gravação — os dados não serão guardados.', 'error');
-      }
+export function defaultTeams() { return ensureTeamsStructure([]); }
 
-      export async function storageGet(key) {
-        if (noStorage) { warnNoStorage(); return (key in memoryFallback) ? { value: memoryFallback[key] } : null; }
-        try {
-          var result = window.localStorage.getItem('torneio_ilog_' + key);
-          return result !== null ? { value: result } : null;
-        } catch (e) { return null; }
-      }
+export function defaultSquads() {
+  const arr = [];
+  for (let i = 0; i < MAX_TEAMS; i++) arr.push([]);
+  return arr;
+}
 
-      export async function storageSet(key, value) {
-        if (noStorage) { warnNoStorage(); memoryFallback[key] = value; return { value: value }; }
-        try {
-          window.localStorage.setItem('torneio_ilog_' + key, value);
-          return { value: value };
-        } catch (e) { flashError(); return null; }
-      }
+export function ensureSquadsLength(arr) {
+  const out = (arr || []).map((s) => Array.isArray(s) ? s : []).slice(0, MAX_TEAMS);
+  while (out.length < MAX_TEAMS) out.push([]);
+  return out;
+}
 
-      export function defaultConfig() {
-        return {
-          nome: 'Torneio 2026', numEquipas: 8, numGrupos: 1, numVoltas: 2,
-          pontosVitoria: 3, pontosEmpate: 1, pontosDerrota: 0, bonusGoleada: 1, golosGoleada: 3,
-          mataMata: false, numPlayoffTeams: 4
-        };
-      }
-      export function defaultTeams() { return ensureTeamsStructure([]); }
-      export function defaultSquads() {
-        var arr = []; for (var i = 0; i < 32; i++) arr.push([]); return arr;
-      }
-      export function ensureSquadsLength(arr) {
-        var out = (arr || []).map(function (s) { return Array.isArray(s) ? s : []; }).slice(0, 32);
-        while (out.length < 32) out.push([]); return out;
-      }
+// ---------------------------------------------------------------------------
+// Estado global da aplicação
+// ---------------------------------------------------------------------------
+export const state = {
+  config: null,
+  teams: null,
+  squads: null,
+  schedule: [],
+  roundsMeta: [],
+  scheduleTeamCount: 0,
+  scheduleVoltas: 0,
+  results: {},
+};
 
-      export function buildSnapshot() {
-        return {
-          version: SNAPSHOT_VERSION,
-          exportedAt: new Date().toISOString(),
-          config: JSON.parse(JSON.stringify(state.config)),
-          teams: JSON.parse(JSON.stringify(state.teams)),
-          squads: JSON.parse(JSON.stringify(state.squads)),
-          schedule: state.schedule.slice(),
-          roundsMeta: state.roundsMeta.slice(),
-          scheduleTeamCount: state.scheduleTeamCount,
-          scheduleVoltas: state.scheduleVoltas,
-          results: JSON.parse(JSON.stringify(state.results))
-        };
-      }
+// ---------------------------------------------------------------------------
+// Camada de persistência (localStorage com fallback em memória)
+// ---------------------------------------------------------------------------
+const memoryFallback = {};
+let storageWarned = false;
+const noStorage = (typeof window.localStorage === 'undefined');
+const STORAGE_PREFIX = 'torneio_ilog_';
 
-      export function validateSnapshot(s) {
-        if (!s || typeof s !== 'object') return false;
-        if (!s.config || !Array.isArray(s.teams) || !Array.isArray(s.schedule)) return false;
-        if (!s.results || typeof s.results !== 'object') return false;
-        return true;
-      }
+export function warnNoStorage() {
+  if (storageWarned) return;
+  storageWarned = true;
+  showToast('O teu navegador bloqueia a gravação — os dados não serão guardados.', 'error');
+}
 
-      export function applySnapshot(s) {
-        state.config = Object.assign(defaultConfig(), s.config);
-        state.teams = ensureTeamsStructure(s.teams);
-        state.squads = ensureSquadsLength(s.squads);
-        state.schedule = s.schedule || [];
-        state.roundsMeta = s.roundsMeta || [];
-        state.scheduleTeamCount = s.scheduleTeamCount || state.config.numEquipas;
-        state.scheduleVoltas = s.scheduleVoltas || state.config.numVoltas;
-        state.results = s.results || {};
-      }
+/** Nota: marcado como async para facilitar futura migração para IndexedDB sem quebrar a API. */
+export async function storageGet(key) {
+  if (noStorage) {
+    warnNoStorage();
+    return (key in memoryFallback) ? { value: memoryFallback[key] } : null;
+  }
+  try {
+    const result = window.localStorage.getItem(STORAGE_PREFIX + key);
+    return result !== null ? { value: result } : null;
+  } catch (e) {
+    return null;
+  }
+}
 
-      export async function persistBackup() {
-        var snap = buildSnapshot();
-        await storageSet('backup', JSON.stringify(snap));
-        flashBackup(snap.exportedAt);
-      }
-      export async function persistConfigTeams() {
-        await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams, squads: state.squads }));
-        flashSaved(); await persistBackup();
-      }
-      export async function persistSchedule() {
-        await storageSet('schedule', JSON.stringify({ schedule: state.schedule, roundsMeta: state.roundsMeta, scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas }));
-        flashSaved(); await persistBackup();
-      }
-      export async function persistResults() {
-        await storageSet('results', JSON.stringify(state.results));
-        flashSaved(); await persistBackup();
-      }
+/** Nota: marcado como async para facilitar futura migração para IndexedDB sem quebrar a API. */
+export async function storageSet(key, value) {
+  if (noStorage) {
+    warnNoStorage();
+    memoryFallback[key] = value;
+    return { value };
+  }
+  try {
+    window.localStorage.setItem(STORAGE_PREFIX + key, value);
+    return { value };
+  } catch (e) {
+    flashError();
+    return null;
+  }
+}
 
-      export function applyGeneratedSchedule(numEquipas, numVoltas, randomizeGroups) {
-        var groupsIndices = [];
-        var nGrupos = state.config.numGrupos || 1;
-        var indices = []; for (var i = 0; i < numEquipas; i++) indices.push(i);
+// ---------------------------------------------------------------------------
+// Snapshot — serialização / deserialização completa do estado
+// ---------------------------------------------------------------------------
+export function buildSnapshot() {
+  return {
+    version: SNAPSHOT_VERSION,
+    exportedAt: new Date().toISOString(),
+    config: JSON.parse(JSON.stringify(state.config)),
+    teams: JSON.parse(JSON.stringify(state.teams)),
+    squads: JSON.parse(JSON.stringify(state.squads)),
+    schedule: state.schedule.slice(),
+    roundsMeta: state.roundsMeta.slice(),
+    scheduleTeamCount: state.scheduleTeamCount,
+    scheduleVoltas: state.scheduleVoltas,
+    results: JSON.parse(JSON.stringify(state.results)),
+  };
+}
 
-        if (randomizeGroups) {
-          for (var i = indices.length - 1; i > 0; i--) {
-            var j = Math.floor(Math.random() * (i + 1));
-            var temp = indices[i];
-            indices[i] = indices[j];
-            indices[j] = temp;
-          }
-        } else {
-          var byGroup = {};
-          for (var i = 0; i < numEquipas; i++) {
-            var g = state.teams[i].group || 0;
-            if (g >= nGrupos) g = nGrupos - 1;
-            byGroup[g] = byGroup[g] || [];
-            byGroup[g].push(i);
-          }
-          indices = [];
-          for (var g = 0; g < nGrupos; g++) {
-            if (byGroup[g]) indices = indices.concat(byGroup[g]);
-          }
-        }
+export function validateSnapshot(s) {
+  if (!s || typeof s !== 'object') return false;
+  if (!s.config || !Array.isArray(s.teams) || !Array.isArray(s.schedule)) return false;
+  if (!s.results || typeof s.results !== 'object') return false;
+  return true;
+}
 
-        var teamsPerGroup = Math.ceil(numEquipas / nGrupos);
-        for (var g = 0; g < nGrupos; g++) {
-          var chunk = indices.slice(g * teamsPerGroup, (g + 1) * teamsPerGroup);
-          groupsIndices.push(chunk);
-          chunk.forEach(function(idx) {
-             if (state.teams[idx]) state.teams[idx].group = g;
-          });
-        }
+export function applySnapshot(s) {
+  state.config = Object.assign(defaultConfig(), s.config);
+  state.teams = ensureTeamsStructure(s.teams);
+  state.squads = ensureSquadsLength(s.squads);
+  state.schedule = s.schedule || [];
+  state.roundsMeta = s.roundsMeta || [];
+  state.scheduleTeamCount = s.scheduleTeamCount || state.config.numEquipas;
+  state.scheduleVoltas = s.scheduleVoltas || state.config.numVoltas;
+  state.results = s.results || {};
+}
 
-        var out = generateSchedule(groupsIndices, numVoltas);
-        state.schedule = out.schedule;
-        state.roundsMeta = out.roundsMeta;
-        state.scheduleTeamCount = numEquipas;
-        state.scheduleVoltas = numVoltas;
-      }
+// ---------------------------------------------------------------------------
+// Persistência por camada (config, calendário, resultados, backup)
+// ---------------------------------------------------------------------------
+export async function persistBackup() {
+  const snap = buildSnapshot();
+  await storageSet('backup', JSON.stringify(snap));
+  flashBackup(snap.exportedAt);
+}
 
-      export async function loadState() {
-        var ct = null, sc = null, rs = null, bk = null;
-        try { var r1 = await storageGet('config-teams'); ct = r1 ? JSON.parse(r1.value) : null; } catch (e) { ct = null; }
-        try { var r2 = await storageGet('schedule'); sc = r2 ? JSON.parse(r2.value) : null; } catch (e) { sc = null; }
-        try { var r3 = await storageGet('results'); rs = r3 ? JSON.parse(r3.value) : null; } catch (e) { rs = null; }
-        try { var r4 = await storageGet('backup'); bk = r4 ? JSON.parse(r4.value) : null; } catch (e) { bk = null; }
+export async function persistConfigTeams() {
+  await storageSet('config-teams', JSON.stringify({
+    config: state.config,
+    teams: state.teams,
+    squads: state.squads,
+  }));
+  flashSaved();
+  await persistBackup();
+}
 
-        var hasIndividualData = ct && ct.config && ct.teams;
+export async function persistSchedule() {
+  await storageSet('schedule', JSON.stringify({
+    schedule: state.schedule,
+    roundsMeta: state.roundsMeta,
+    scheduleTeamCount: state.scheduleTeamCount,
+    scheduleVoltas: state.scheduleVoltas,
+  }));
+  flashSaved();
+  await persistBackup();
+}
 
-        if (hasIndividualData) {
-          state.config = Object.assign(defaultConfig(), ct.config);
-          state.teams = ensureTeamsStructure(ct.teams);
-          state.squads = ensureSquadsLength(ct.squads);
+export async function persistResults() {
+  await storageSet('results', JSON.stringify(state.results));
+  flashSaved();
+  await persistBackup();
+}
 
-          if (sc && sc.schedule && sc.schedule.length) {
-            state.schedule = sc.schedule;
-            state.roundsMeta = sc.roundsMeta || [];
-            state.scheduleTeamCount = sc.scheduleTeamCount || state.config.numEquipas;
-            state.scheduleVoltas = sc.scheduleVoltas || state.config.numVoltas;
-          } else {
-            applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
-            await persistSchedule();
-          }
-          state.results = rs || {};
-        } else if (validateSnapshot(bk)) {
-          applySnapshot(bk);
-          await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams, squads: state.squads }));
-          await storageSet('schedule', JSON.stringify({ schedule: state.schedule, roundsMeta: state.roundsMeta, scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas }));
-          await storageSet('results', JSON.stringify(state.results));
-          showToast('Estado restaurado a partir do backup automático.', 'ok');
-          flashBackup(bk.exportedAt);
-        } else {
-          state.config = defaultConfig();
-          state.teams = defaultTeams();
-          state.squads = defaultSquads();
-          applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
-          await persistConfigTeams();
-          await persistSchedule();
-          await persistResults();
-        }
-        if (bk && bk.exportedAt) flashBackup(bk.exportedAt);
-      }
+// ---------------------------------------------------------------------------
+// Geração de calendário e atribuição de grupos
+// ---------------------------------------------------------------------------
+export function applyGeneratedSchedule(numEquipas, numVoltas, randomizeGroups) {
+  const nGrupos = state.config.numGrupos || 1;
+  let indices = [];
+  for (let i = 0; i < numEquipas; i++) indices.push(i);
 
-      export function exportJSON() {
-        var snap = buildSnapshot();
-        var blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
-        var url = URL.createObjectURL(blob);
-        var safeName = (state.config.nome || 'torneio').replace(/[^a-z0-9_\-]/gi, '_').toLowerCase();
-        var ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
-        var a = document.createElement('a'); a.href = url; a.download = safeName + '_' + ts + '.json';
-        document.body.appendChild(a); a.click(); document.body.removeChild(a); URL.revokeObjectURL(url);
-        showToast('Torneio exportado com sucesso!', 'ok');
-      }
+  if (randomizeGroups) {
+    // Fisher-Yates shuffle
+    for (let i = indices.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [indices[i], indices[j]] = [indices[j], indices[i]];
+    }
+  } else {
+    const byGroup = {};
+    for (let i = 0; i < numEquipas; i++) {
+      let g = state.teams[i].group || 0;
+      if (g >= nGrupos) g = nGrupos - 1;
+      if (!byGroup[g]) byGroup[g] = [];
+      byGroup[g].push(i);
+    }
+    indices = [];
+    for (let g = 0; g < nGrupos; g++) {
+      if (byGroup[g]) indices = indices.concat(byGroup[g]);
+    }
+  }
 
-      export function importJSON(file) {
-        if (!file) return;
-        var reader = new FileReader();
-        reader.onload = function (e) {
-          try { var snap = JSON.parse(e.target.result); } catch (err) { showToast('Ficheiro inválido.', 'error'); return; }
-          if (!validateSnapshot(snap)) { showToast('Estrutura inválida.', 'error'); return; }
-          openConfirm('Importar torneio', 'Isto vai substituir TODO o estado atual. Continuar?', async function () {
-            applySnapshot(snap);
-            await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams, squads: state.squads }));
-            await storageSet('schedule', JSON.stringify({ schedule: state.schedule, roundsMeta: state.roundsMeta, scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas }));
-            await storageSet('results', JSON.stringify(state.results));
-            await persistBackup(); renderAll(); showToast('Torneio importado com sucesso!', 'ok');
-          });
-        };
-        reader.readAsText(file);
-      }
+  const teamsPerGroup = Math.ceil(numEquipas / nGrupos);
+  const groupsIndices = [];
+
+  for (let g = 0; g < nGrupos; g++) {
+    const chunk = indices.slice(g * teamsPerGroup, (g + 1) * teamsPerGroup);
+    groupsIndices.push(chunk);
+    chunk.forEach((idx) => {
+      if (state.teams[idx]) state.teams[idx].group = g;
+    });
+  }
+
+  const out = generateSchedule(groupsIndices, numVoltas);
+  state.schedule = out.schedule;
+  state.roundsMeta = out.roundsMeta;
+  state.scheduleTeamCount = numEquipas;
+  state.scheduleVoltas = numVoltas;
+}
+
+// ---------------------------------------------------------------------------
+// Carregamento do estado a partir do localStorage
+// ---------------------------------------------------------------------------
+export async function loadState() {
+  let ct = null;
+  let sc = null;
+  let rs = null;
+  let bk = null;
+
+  try { const r = await storageGet('config-teams'); ct = r ? JSON.parse(r.value) : null; } catch { ct = null; }
+  try { const r = await storageGet('schedule');     sc = r ? JSON.parse(r.value) : null; } catch { sc = null; }
+  try { const r = await storageGet('results');      rs = r ? JSON.parse(r.value) : null; } catch { rs = null; }
+  try { const r = await storageGet('backup');       bk = r ? JSON.parse(r.value) : null; } catch { bk = null; }
+
+  const hasIndividualData = ct && ct.config && ct.teams;
+
+  if (hasIndividualData) {
+    state.config = Object.assign(defaultConfig(), ct.config);
+    state.teams = ensureTeamsStructure(ct.teams);
+    state.squads = ensureSquadsLength(ct.squads);
+
+    if (sc && sc.schedule && sc.schedule.length) {
+      state.schedule = sc.schedule;
+      state.roundsMeta = sc.roundsMeta || [];
+      state.scheduleTeamCount = sc.scheduleTeamCount || state.config.numEquipas;
+      state.scheduleVoltas = sc.scheduleVoltas || state.config.numVoltas;
+    } else {
+      applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
+      await persistSchedule();
+    }
+
+    state.results = rs || {};
+  } else if (validateSnapshot(bk)) {
+    applySnapshot(bk);
+    await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams, squads: state.squads }));
+    await storageSet('schedule', JSON.stringify({ schedule: state.schedule, roundsMeta: state.roundsMeta, scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas }));
+    await storageSet('results', JSON.stringify(state.results));
+    showToast('Estado restaurado a partir do backup automático.', 'ok');
+    flashBackup(bk.exportedAt);
+  } else {
+    state.config = defaultConfig();
+    state.teams = defaultTeams();
+    state.squads = defaultSquads();
+    applyGeneratedSchedule(state.config.numEquipas, state.config.numVoltas, false);
+    await persistConfigTeams();
+    await persistSchedule();
+    await persistResults();
+  }
+
+  if (bk && bk.exportedAt) flashBackup(bk.exportedAt);
+}
+
+// ---------------------------------------------------------------------------
+// Exportação / Importação JSON
+// ---------------------------------------------------------------------------
+export function exportJSON() {
+  const snap = buildSnapshot();
+  const blob = new Blob([JSON.stringify(snap, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const safeName = (state.config.nome || 'torneio').replace(/[^a-z0-9_\-]/gi, '_').toLowerCase();
+  const ts = new Date().toISOString().slice(0, 16).replace(/[:T]/g, '-');
+
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `${safeName}_${ts}.json`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+
+  showToast('Torneio exportado com sucesso!', 'ok');
+}
+
+export function importJSON(file) {
+  if (!file) return;
+  const reader = new FileReader();
+
+  reader.onload = (e) => {
+    let snap;
+    try {
+      snap = JSON.parse(e.target.result);
+    } catch {
+      showToast('Ficheiro inválido.', 'error');
+      return;
+    }
+
+    if (!validateSnapshot(snap)) {
+      showToast('Estrutura inválida.', 'error');
+      return;
+    }
+
+    openConfirm('Importar torneio', 'Isto vai substituir TODO o estado atual. Continuar?', async () => {
+      applySnapshot(snap);
+      await storageSet('config-teams', JSON.stringify({ config: state.config, teams: state.teams, squads: state.squads }));
+      await storageSet('schedule', JSON.stringify({ schedule: state.schedule, roundsMeta: state.roundsMeta, scheduleTeamCount: state.scheduleTeamCount, scheduleVoltas: state.scheduleVoltas }));
+      await storageSet('results', JSON.stringify(state.results));
+      await persistBackup();
+      renderAll();
+      showToast('Torneio importado com sucesso!', 'ok');
+    });
+  };
+
+  reader.readAsText(file);
+}
