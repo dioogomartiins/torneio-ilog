@@ -111,7 +111,7 @@
     }
 
     .app {
-      max-width: 1080px;
+      max-width: 1440px;
       margin: 0 auto;
       padding: 0 0 48px;
     }
@@ -134,7 +134,7 @@
 
     .marquee-content {
       position: relative;
-      max-width: 1080px;
+      max-width: 1440px;
       margin: 0 auto;
     }
 
@@ -195,6 +195,29 @@
     .backup-pill.pill-fresh {
       background: rgba(47, 122, 79, .28);
       color: #7dd8a0;
+    }
+
+    .theme-toggle-btn {
+      background: rgba(255, 255, 255, .12);
+      border: none;
+      color: #dfe8de;
+      border-radius: 999px;
+      padding: 4px 8px;
+      cursor: pointer;
+      font-size: 13px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      transition: background .2s ease, transform .1s ease;
+      line-height: 1;
+    }
+    
+    .theme-toggle-btn:hover {
+      background: rgba(255, 255, 255, .2);
+    }
+    
+    .theme-toggle-btn:active {
+      transform: scale(0.95);
     }
 
     #tournamentTitle {
@@ -1174,8 +1197,10 @@
         <div class="marquee-top">
           <span class="eyebrow">Gestor de Torneio</span>
           <div class="header-pills">
+            <button class="theme-toggle-btn" id="btnAtualizar" title="Atualizar Tabela">🔁</button>
             <span class="save-pill" id="savePill">Guardado</span>
             <span class="backup-pill" id="backupPill">Sem backup</span>
+            <button class="theme-toggle-btn" id="btnDarkMode" title="Alternar Modo Escuro/Claro">🌙</button>
           </div>
         </div>
         <h1 id="tournamentTitle">TORNEIO 2026</h1>
@@ -1184,9 +1209,6 @@
     </header>
 
     <div class="toolbar">
-      <button class="btn btn-ghost" id="btnAtualizar">🔁 Atualizar Tabela</button>
-      <button class="btn btn-ghost" id="btnDarkMode" title="Alternar Modo Escuro/Claro">🌓 Escuro/Claro</button>
-
       <!-- MENU MOBILE -->
       <button class="btn btn-outline" id="btnMobileMenu">☰ Menu</button>
     </div>
@@ -2823,10 +2845,16 @@
         dom.btnAdicionarVolta.addEventListener('click', onAdicionarVolta);
         dom.btnGerarEliminatorias.addEventListener('click', onGerarEliminatorias);
 
+        function updateThemeIcon() {
+          dom.btnDarkMode.textContent = currentTheme === 'dark' ? '☀️' : '🌙';
+        }
+        updateThemeIcon();
+
         dom.btnDarkMode.addEventListener('click', function () {
           currentTheme = currentTheme === 'light' ? 'dark' : 'light';
           document.documentElement.setAttribute('data-theme', currentTheme);
           localStorage.setItem('torneio_theme', currentTheme);
+          updateThemeIcon();
         });
 
         dom.squadTeamSelect.addEventListener('change', renderSquadList);
