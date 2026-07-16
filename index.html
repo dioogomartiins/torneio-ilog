@@ -370,24 +370,12 @@
       gap: 18px;
     }
 
-    @media (max-width:760px) {
-      .grid-2 {
-        grid-template-columns: 1fr;
-      }
-    }
-
     /* ---------- Podium (dashboard) ---------- */
     .podium {
       display: grid;
       grid-template-columns: repeat(3, 1fr);
       gap: 12px;
       margin-bottom: 18px;
-    }
-
-    @media (max-width:600px) {
-      .podium {
-        grid-template-columns: 1fr;
-      }
     }
 
     .podium-card {
@@ -523,12 +511,6 @@
       gap: 14px 18px;
     }
 
-    @media (max-width:600px) {
-      .form-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
     .field label {
       display: block;
       font-size: 12px;
@@ -580,12 +562,6 @@
       display: grid;
       grid-template-columns: repeat(2, 1fr);
       gap: 8px 20px;
-    }
-
-    @media (max-width:640px) {
-      .teams-grid {
-        grid-template-columns: 1fr;
-      }
     }
 
     .team-row {
@@ -789,18 +765,6 @@
       gap: 12px;
     }
 
-    @media (max-width:760px) {
-      .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-      }
-    }
-
-    @media (max-width:480px) {
-      .stats-grid {
-        grid-template-columns: 1fr;
-      }
-    }
-
     .stat-card {
       background: var(--paper);
       border: 1px solid var(--line);
@@ -878,6 +842,18 @@
       color: #152018 !important;
     }
 
+    .modal-actions {
+      display: flex !important;
+      justify-content: space-between !important;
+      margin-top: 18px;
+      width: 100%;
+    }
+
+    .modal-actions .btn {
+      width: 48% !important;
+      justify-content: center !important;
+    }
+
     /* ---------- Toast ---------- */
     .toast-root {
       position: fixed;
@@ -925,32 +901,47 @@
       font-size: 12px;
     }
 
-    @media (prefers-reduced-motion:reduce) {
-      * {
-        animation: none !important;
-        transition: none !important;
-      }
-    }
-
     /* =========================================================
        📱 MELHORIAS MOBILE (RESPONSIVE)
     ========================================================= */
-    #btnMobileMenu { display: none; margin-left: auto; } /* Invisível no PC */
+    #btnMobileMenu {
+      display: none;
+      margin-left: 0%;
+      order: -99;
+    }
 
     @media (max-width: 760px) {
-      /* 1. Menu Hamburguer */
-      #btnMobileMenu { display: inline-flex; }
-      
+      .grid-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .podium {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+
+      .form-grid {
+        grid-template-columns: 1fr;
+      }
+
+      /* Menu Hamburguer */
+      #btnMobileMenu {
+        display: inline-flex;
+      }
+
       .tabs {
-        display: none; /* Escondido por defeito no mobile */
+        display: none;
         flex-direction: column;
         padding: 10px;
         background: var(--card);
         box-shadow: var(--shadow-sm);
       }
-      
+
       .tabs.menu-open {
-        display: flex; /* Mostra quando tem a classe */
+        display: flex;
         animation: fadein 0.2s ease;
       }
 
@@ -967,28 +958,45 @@
         background: var(--paper);
       }
 
-      /* 2. Resultados em Duas Linhas */
+      /* Resultados em Duas Linhas */
       .fixture {
-        grid-template-columns: 1fr 1fr; /* Duas colunas iguais */
+        grid-template-columns: 1fr 1fr;
         gap: 8px 4px;
       }
-      
+
       .fixture .fx-home {
-        grid-column: 1; grid-row: 1; text-align: center;
+        grid-column: 1;
+        grid-row: 1;
+        text-align: center;
       }
-      
+
       .fixture .fx-away {
-        grid-column: 2; grid-row: 1; text-align: center;
+        grid-column: 2;
+        grid-row: 1;
+        text-align: center;
       }
-      
+
       .result-split {
-        grid-column: 1 / span 2; /* Ocupa as duas colunas na linha de baixo */
+        grid-column: 1 / span 2;
         grid-row: 2;
-        margin: 0 auto; /* Centra os botões +/- e as caixas */
+        margin: 0 auto;
       }
-      
+
       .fixture-bye {
-        grid-template-columns: 1fr; /* A folga fica só numa linha */
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .stats-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (prefers-reduced-motion:reduce) {
+      * {
+        animation: none !important;
+        transition: none !important;
       }
     }
   </style>
@@ -1013,10 +1021,8 @@
     </header>
 
     <div class="toolbar">
+      <button class="btn btn-ghost" id="btnAtualizar">🔁 Atualizar Tabela</button>
       <button class="btn btn-outline" id="btnMobileMenu">☰ Menu</button>
-      <button class="btn btn-gold" id="btnGerarCalendario">🔄 Gerar Calendário</button>
-      <button class="btn btn-outline" id="btnNovoTorneio">🧹 Novo Torneio</button>
-      <button class="btn btn-ghost" id="btnAtualizar">🔁 Atualizar</button>
     </div>
 
     <nav class="tabs" id="tabs">
@@ -1060,10 +1066,10 @@
             </div>
           </div>
         </div>
+
         <div class="card">
           <div class="section-title">⚽ Formato do torneio</div>
-          <p class="section-sub">Estes dois campos só entram em vigor depois de clicares em <strong>🔄 Gerar
-              Calendário</strong>, na barra do topo.</p>
+          <p class="section-sub">Define aqui o formato base do teu torneio.</p>
           <div class="form-grid">
             <div class="field">
               <label for="cfgNumEquipas">Número de equipas (2–32)</label>
@@ -1076,7 +1082,11 @@
             </div>
           </div>
           <div class="hint-box" id="scheduleHint"></div>
+
+          <button class="btn btn-gold" id="btnGerarCalendario"
+            style="margin-top: 16px; width: 100%; justify-content: center;">🔄 Gerar Calendário</button>
         </div>
+
         <div class="card">
           <div class="section-title">📐 Pontuação</div>
           <div class="form-grid">
@@ -1114,12 +1124,14 @@
           <div class="section-title">👕 Gestão de Plantéis</div>
           <p class="section-sub">Seleciona uma equipa e adiciona os jogadores para acompanhares a tabela de melhores
             marcadores.</p>
+
           <div class="form-grid" style="margin-bottom: 20px;">
             <div class="field">
               <label for="squadTeamSelect">Escolher Equipa</label>
               <select id="squadTeamSelect" class="input"></select>
             </div>
           </div>
+
           <div
             style="background: #FAFBF9; border: 1px solid var(--line); border-radius: var(--radius-sm); padding: 16px;">
             <div class="form-grid" style="align-items: end; margin-bottom: 16px;">
@@ -1136,6 +1148,7 @@
                 </div>
               </div>
             </div>
+
             <div id="squadList"></div>
           </div>
         </div>
@@ -1206,13 +1219,20 @@
       <section id="tab-data" class="panel">
         <div class="card">
           <div class="section-title">💾 Backup e Restauro</div>
-          <p class="section-sub">Guarda uma cópia de segurança do teu torneio (equipas, plantel, resultados) num
-            ficheiro .json que podes importar mais tarde em qualquer dispositivo.</p>
+          <p class="section-sub">Guarda uma cópia de segurança do teu torneio num ficheiro .json que podes importar mais
+            tarde em qualquer dispositivo.</p>
           <div style="display:flex; gap:12px; margin-top: 18px; flex-wrap: wrap;">
             <button class="btn btn-teal" id="btnExportar">⬇️ Exportar JSON</button>
             <button class="btn btn-teal" id="btnImportar">⬆️ Importar JSON</button>
             <input type="file" id="inputImportar" accept=".json,application/json" style="display:none">
           </div>
+        </div>
+
+        <div class="card" style="border-color: var(--danger);">
+          <div class="section-title" style="color: var(--danger);">🧹 Zona de Perigo</div>
+          <p class="section-sub">Apaga todos os resultados e estatísticas, mas mantém as tuas equipas, plantéis e
+            calendário.</p>
+          <button class="btn btn-danger" id="btnNovoTorneio" style="margin-top: 8px;">🧹 Começar Novo Torneio</button>
         </div>
       </section>
 
@@ -1224,11 +1244,10 @@
   <div class="modal-overlay" id="modalOverlay" hidden>
     <div class="modal" role="alertdialog" aria-modal="true" aria-labelledby="modalTitle" aria-describedby="modalBody">
       <h3 id="modalTitle"></h3>
-      <p id="modalBody"></p>
+      <div id="modalBody"></div>
       <div class="modal-actions">
-        <button class="btn btn-ghost" id="modalCancel"
-          style="color:var(--ink);background:var(--paper);">Cancelar</button>
-        <button class="btn btn-danger" id="modalConfirm">Confirmar</button>
+        <button class="btn btn-ghost" id="modalCancel">Cancelar</button>
+        <button class="btn btn-danger" id="modalConfirm">Auto-Golo</button>
       </div>
     </div>
   </div>
@@ -1254,14 +1273,28 @@
           dom.modalBody.innerHTML = '<p class="empty">Nenhum jogador registado nesta equipa.</p>';
         } else {
           dom.modalBody.innerHTML = players.map(function (p) {
-            return '<button class="btn btn-ghost" data-pid="' + p.id + '">' + p.num + ' - ' + escapeHtml(p.name) + '</button>';
+            return '<button class="btn btn-ghost scorer-btn" data-pid="' + p.id + '">' + p.num + ' - ' + escapeHtml(p.name) + '</button>';
           }).join('');
         }
 
-        dom.modalConfirm.hidden = true;
+        // Alterar Botões para formato "Scorer Modal" (X e ✅)
+        dom.modalCancel.innerHTML = '❌ Cancelar';
+        dom.modalCancel.style.background = 'var(--danger)';
+        dom.modalCancel.style.color = '#fff';
+
+        dom.modalConfirm.innerHTML = '✅ Auto-Golo';
+        dom.modalConfirm.style.background = 'var(--pitch-500)';
+        dom.modalConfirm.style.color = '#fff';
+        dom.modalConfirm.hidden = false;
+
+        confirmCallback = function () {
+          onSelect('auto'); // Grava como auto golo
+          dom.modalOverlay.hidden = true;
+        };
+
         dom.modalOverlay.hidden = false;
 
-        var btns = dom.modalBody.querySelectorAll('button');
+        var btns = dom.modalBody.querySelectorAll('.scorer-btn');
         Array.prototype.forEach.call(btns, function (b) {
           b.onclick = function () {
             onSelect(b.dataset.pid);
@@ -1320,7 +1353,6 @@
         schedule.forEach(function (game, gi) {
           var resObj = results[gi];
           if (!resObj) return;
-          // Lida tanto com objetos {score:"2-1"} como com strings antigas "2-1"
           var resStr = typeof resObj === 'object' ? resObj.score : String(resObj);
 
           var m = /^(\d+)-(\d+)$/.exec(resStr.trim());
@@ -1715,7 +1747,6 @@
         ['tournamentTitle', 'savePill', 'backupPill', 'marqueeTicker',
           'btnGerarCalendario', 'btnNovoTorneio', 'btnAtualizar', 'btnExportar', 'btnImportar', 'inputImportar',
           'btnAdicionarVolta', 'calendarActions',
-          'btnMobileMenu', 'tabs',
           'dashboardPodium', 'dashboardStandings', 'dashboardStats',
           'cfgNome', 'cfgNumEquipas', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
           'teamsList',
@@ -1949,7 +1980,6 @@
         var scorers = computeScorerStats().slice(0, 10);
         var html = statCardsHtml(summary);
 
-        // Adicionar secção de marcadores à grid com a equipa
         html += '<div class="card" style="grid-column: span 3;"><div class="section-title">👟 Tabela de Marcadores</div>' +
           (scorers.length ? scorers.map(function (s) {
             return '<div style="padding:6px 0; border-bottom:1px solid #eee;"><strong>' + s.count + '</strong> golos — ' + escapeHtml(s.name) + ' <span style="color:var(--ink-faint); font-size:13px;">(' + escapeHtml(s.team) + ')</span></div>';
@@ -2139,31 +2169,27 @@
         refreshComputed();
       }
 
-      /* =========================================================
-        ESTATÍSTICAS DE MARCADORES
-      ========================================================= */
       function computeScorerStats() {
-        var stats = {}; // { playerId: { name: "", team: "", count: 0 } }
+        var stats = {};
 
-        // 1. Percorrer todos os resultados guardados
         Object.keys(state.results).forEach(function (gi) {
           var res = state.results[gi];
           if (!res || typeof res !== 'object' || !res.scorers) return;
 
-          // Processar golos de ambos os lados
           ['home', 'away'].forEach(function (side) {
             if (!res.scorers[side]) return;
             res.scorers[side].forEach(function (pId) {
+              if (pId === 'auto') return; // Ignora o cálculo caso seja um Auto Golo
+
               if (!stats[pId]) {
                 var playerName = "Jogador Desconhecido";
                 var playerTeam = "Sem Equipa";
-                
-                // Procurar o jogador nos plantéis para descobrir o nome e a equipa
+
                 state.squads.forEach(function (squad, teamIndex) {
                   var p = squad.find(function (player) { return player.id === pId; });
                   if (p) {
                     playerName = p.name;
-                    playerTeam = getTeamName(teamIndex); // Obtém o nome da equipa
+                    playerTeam = getTeamName(teamIndex);
                   }
                 });
                 stats[pId] = { name: playerName, team: playerTeam, count: 0 };
@@ -2173,7 +2199,6 @@
           });
         });
 
-        // 2. Converter para array e ordenar
         return Object.keys(stats).map(function (id) {
           return { name: stats[id].name, team: stats[id].team, count: stats[id].count };
         }).sort(function (a, b) { return b.count - a.count; });
@@ -2209,7 +2234,7 @@
       }
 
       function onNovoTorneio() {
-        openConfirm('Novo torneio', 'Isto apaga todos os resultados, a classificação e as estatísticas. As equipas, o plantel, a configuração e o calendário mantêm-se. Continuar?', function () {
+        openConfirm('🧹 Novo torneio', 'Isto apaga todos os resultados, a classificação e as estatísticas. As equipas, o plantel, a configuração e o calendário mantêm-se. Continuar?', function () {
           state.results = {};
           persistResults();
           renderAll();
@@ -2246,11 +2271,23 @@
       var confirmCallback = null;
       function openConfirm(title, body, onConfirm) {
         dom.modalTitle.textContent = title;
-        dom.modalBody.textContent = body;
+        dom.modalBody.innerHTML = body;
         confirmCallback = onConfirm;
+
+        // Reset aos estilos de botão para o "Confirm Standard"
+        dom.modalCancel.innerHTML = 'Cancelar';
+        dom.modalCancel.style.background = 'var(--paper)';
+        dom.modalCancel.style.color = 'var(--ink)';
+
+        dom.modalConfirm.innerHTML = 'Confirmar';
+        dom.modalConfirm.style.background = 'var(--danger)';
+        dom.modalConfirm.style.color = '#fff';
+        dom.modalConfirm.hidden = false;
+
         dom.modalOverlay.hidden = false;
         dom.modalConfirm.focus();
       }
+
       function closeConfirm() {
         dom.modalOverlay.hidden = true;
         confirmCallback = null;
@@ -2294,21 +2331,22 @@
       }
 
       function bindEvents() {
-        dom.tabs.forEach(function (btn) {
-          btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
-        });
+        var btnMenu = document.getElementById('btnMobileMenu');
+        var tabsContainer = document.getElementById('tabs');
 
-        Array.prototype.slice.call(document.querySelectorAll('.tab')).forEach(function (btn) {
-          btn.addEventListener('click', function () { 
-            switchTab(btn.dataset.tab); 
-            dom.tabs.classList.remove('menu-open'); // Fecha o menu depois de clicar
+        if (btnMenu && tabsContainer) {
+          btnMenu.addEventListener('click', function () {
+            tabsContainer.classList.toggle('menu-open');
+          });
+        }
+
+        dom.tabs.forEach(function (btn) {
+          btn.addEventListener('click', function () {
+            switchTab(btn.dataset.tab);
+            if (tabsContainer) tabsContainer.classList.remove('menu-open');
           });
         });
-        
-        dom.btnMobileMenu.addEventListener('click', function() {
-          dom.tabs.classList.toggle('menu-open');
-        });
-        
+
         dom.btnGerarCalendario.addEventListener('click', onGerarCalendario);
         dom.btnNovoTorneio.addEventListener('click', onNovoTorneio);
         dom.btnAtualizar.addEventListener('click', onAtualizar);
