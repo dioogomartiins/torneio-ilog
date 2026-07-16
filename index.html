@@ -931,6 +931,66 @@
         transition: none !important;
       }
     }
+
+    /* =========================================================
+       📱 MELHORIAS MOBILE (RESPONSIVE)
+    ========================================================= */
+    #btnMobileMenu { display: none; margin-left: auto; } /* Invisível no PC */
+
+    @media (max-width: 760px) {
+      /* 1. Menu Hamburguer */
+      #btnMobileMenu { display: inline-flex; }
+      
+      .tabs {
+        display: none; /* Escondido por defeito no mobile */
+        flex-direction: column;
+        padding: 10px;
+        background: var(--card);
+        box-shadow: var(--shadow-sm);
+      }
+      
+      .tabs.menu-open {
+        display: flex; /* Mostra quando tem a classe */
+        animation: fadein 0.2s ease;
+      }
+
+      .tab {
+        text-align: left;
+        padding: 14px;
+        border-bottom: 1px solid var(--line);
+        border-left: 3px solid transparent;
+      }
+
+      .tab.active {
+        border-bottom-color: var(--line);
+        border-left-color: var(--gold);
+        background: var(--paper);
+      }
+
+      /* 2. Resultados em Duas Linhas */
+      .fixture {
+        grid-template-columns: 1fr 1fr; /* Duas colunas iguais */
+        gap: 8px 4px;
+      }
+      
+      .fixture .fx-home {
+        grid-column: 1; grid-row: 1; text-align: center;
+      }
+      
+      .fixture .fx-away {
+        grid-column: 2; grid-row: 1; text-align: center;
+      }
+      
+      .result-split {
+        grid-column: 1 / span 2; /* Ocupa as duas colunas na linha de baixo */
+        grid-row: 2;
+        margin: 0 auto; /* Centra os botões +/- e as caixas */
+      }
+      
+      .fixture-bye {
+        grid-template-columns: 1fr; /* A folga fica só numa linha */
+      }
+    }
   </style>
 </head>
 
@@ -953,6 +1013,7 @@
     </header>
 
     <div class="toolbar">
+      <button class="btn btn-outline" id="btnMobileMenu">☰ Menu</button>
       <button class="btn btn-gold" id="btnGerarCalendario">🔄 Gerar Calendário</button>
       <button class="btn btn-outline" id="btnNovoTorneio">🧹 Novo Torneio</button>
       <button class="btn btn-ghost" id="btnAtualizar">🔁 Atualizar</button>
@@ -1654,6 +1715,7 @@
         ['tournamentTitle', 'savePill', 'backupPill', 'marqueeTicker',
           'btnGerarCalendario', 'btnNovoTorneio', 'btnAtualizar', 'btnExportar', 'btnImportar', 'inputImportar',
           'btnAdicionarVolta', 'calendarActions',
+          'btnMobileMenu', 'tabs',
           'dashboardPodium', 'dashboardStandings', 'dashboardStats',
           'cfgNome', 'cfgNumEquipas', 'cfgNumVoltas', 'cfgVitoria', 'cfgEmpate', 'cfgDerrota', 'cfgBonus', 'cfgGoleada', 'scheduleHint',
           'teamsList',
@@ -2235,6 +2297,18 @@
         dom.tabs.forEach(function (btn) {
           btn.addEventListener('click', function () { switchTab(btn.dataset.tab); });
         });
+
+        Array.prototype.slice.call(document.querySelectorAll('.tab')).forEach(function (btn) {
+          btn.addEventListener('click', function () { 
+            switchTab(btn.dataset.tab); 
+            dom.tabs.classList.remove('menu-open'); // Fecha o menu depois de clicar
+          });
+        });
+        
+        dom.btnMobileMenu.addEventListener('click', function() {
+          dom.tabs.classList.toggle('menu-open');
+        });
+        
         dom.btnGerarCalendario.addEventListener('click', onGerarCalendario);
         dom.btnNovoTorneio.addEventListener('click', onNovoTorneio);
         dom.btnAtualizar.addEventListener('click', onAtualizar);
