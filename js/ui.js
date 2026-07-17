@@ -194,7 +194,7 @@ export function renderSquadList() {
   const totalRating = getTeamTotalRating(squadPlayersObj);
   const media = squadPlayersObj.length > 0 ? (totalRating / squadPlayersObj.length) : 0;
 
-  const ratingHeaderHtml = 
+  const ratingHeaderHtml =
     `<div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; margin-bottom:12px; padding:8px 12px; background:var(--paper); border:1px solid var(--line); border-radius:var(--radius-sm);">` +
     `<span style="font-size:13px; font-weight:700; color:var(--ink-soft); text-transform:uppercase;">Jogadores (${squad.length})</span>` +
     `<span style="font-family:var(--font-display); font-size:14px; font-weight:700; color:var(--gold-dark);" title="Rating Médio (calculado a partir da Base de Dados)">Média ★ ${media.toFixed(1)}</span>` +
@@ -500,8 +500,8 @@ export function renderStatsGrid(summary) {
 
   const scorerRows = scorers.length
     ? scorers.map((s) =>
-        `<div style="padding:6px 0; border-bottom:1px solid var(--line);"><strong>${s.count}</strong> golos — ${escapeHtml(s.name)} <span style="color:var(--ink-faint); font-size:13px;">(${escapeHtml(s.team)})</span></div>`
-      ).join('')
+      `<div style="padding:6px 0; border-bottom:1px solid var(--line);"><strong>${s.count}</strong> golos — ${escapeHtml(s.name)} <span style="color:var(--ink-faint); font-size:13px;">(${escapeHtml(s.team)})</span></div>`
+    ).join('')
     : '<p class="empty">Nenhum golo registado ainda.</p>';
 
   html += `<div class="card" style="grid-column: span 3;"><div class="section-title">👟 Tabela de Marcadores</div>${scorerRows}</div>`;
@@ -536,9 +536,9 @@ export function computeStatsSummary() {
     return arr.reduce((a, b) => (better(b, a) ? b : a));
   }
 
-  const bestAtk   = pick(withGames, (b, a) => b.GM > a.GM);
-  const bestDef   = pick(withGames, (b, a) => b.GS < a.GS);
-  const mostWins  = pick(withGames, (b, a) => b.V > a.V);
+  const bestAtk = pick(withGames, (b, a) => b.GM > a.GM);
+  const bestDef = pick(withGames, (b, a) => b.GS < a.GS);
+  const mostWins = pick(withGames, (b, a) => b.V > a.V);
   const mostDraws = pick(withGames, (b, a) => b.E > a.E);
 
   let biggestWin = null;
@@ -578,10 +578,10 @@ export function computeStatsSummary() {
     pendentes: total - played,
     totalGoals,
     media,
-    bestAtkLabel:   bestAtk   ? `${bestAtk.name} — ${bestAtk.GM} golos`       : '—',
-    bestDefLabel:   bestDef   ? `${bestDef.name} — ${bestDef.GS} sofridos`     : '—',
-    mostWinsLabel:  mostWins  ? `${mostWins.name} — ${mostWins.V} vitórias`    : '—',
-    mostDrawsLabel: mostDraws ? `${mostDraws.name} — ${mostDraws.E} empates`   : '—',
+    bestAtkLabel: bestAtk ? `${bestAtk.name} — ${bestAtk.GM} golos` : '—',
+    bestDefLabel: bestDef ? `${bestDef.name} — ${bestDef.GS} sofridos` : '—',
+    mostWinsLabel: mostWins ? `${mostWins.name} — ${mostWins.V} vitórias` : '—',
+    mostDrawsLabel: mostDraws ? `${mostDraws.name} — ${mostDraws.E} empates` : '—',
     biggestWinLabel: biggestWin ? `${biggestWin.text}  (dif. ${biggestWin.diff})` : '—',
     totalRounds: state.roundsMeta.length,
     currentRound,
@@ -601,21 +601,21 @@ export function renderDashboard(summary) {
 
   dom.dashboardPodium.innerHTML = top3.length
     ? top3.map((s, i) =>
-        `<div class="podium-card podium-${i + 1}">` +
-        `<div class="podium-rank">${i + 1}º LUGAR</div>` +
-        `<div class="podium-name">${escapeHtml(s.name)}</div>` +
-        `<div class="podium-pts">${s.Pts} pts · ${s.J} jogos</div>` +
-        `</div>`
-      ).join('')
+      `<div class="podium-card podium-${i + 1}">` +
+      `<div class="podium-rank">${i + 1}º LUGAR</div>` +
+      `<div class="podium-name">${escapeHtml(s.name)}</div>` +
+      `<div class="podium-pts">${s.Pts} pts · ${s.J} jogos</div>` +
+      `</div>`
+    ).join('')
     : '<p class="empty">Sem equipas configuradas.</p>';
 
   const rest = sortedAll.slice(3, 8);
   dom.dashboardStandings.innerHTML = rest.length
     ? `<table class="mini-table"><thead><tr><th>Pos</th><th style="text-align:left;">Equipa</th><th>J</th><th>Pts</th></tr></thead><tbody>` +
-      rest.map((s, i) =>
-        `<tr><td class="num">${i + 4}</td><td style="text-align:left;">${getTeamDisplay(s.idx)}</td><td class="num">${s.J}</td><td class="num">${s.Pts}</td></tr>`
-      ).join('') +
-      `</tbody></table>`
+    rest.map((s, i) =>
+      `<tr><td class="num">${i + 4}</td><td style="text-align:left;">${getTeamDisplay(s.idx)}</td><td class="num">${s.J}</td><td class="num">${s.Pts}</td></tr>`
+    ).join('') +
+    `</tbody></table>`
     : '';
 
   dom.dashboardStats.innerHTML = statCardsHtml(summary);
@@ -623,10 +623,10 @@ export function renderDashboard(summary) {
   const scorers = computeScorerStats().slice(0, 5);
   const scorerHtml = scorers.length > 0
     ? scorers.map((s, i) =>
-        `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line);">` +
-        `<span>${i + 1}. ${escapeHtml(s.name)} <span style="color:var(--ink-faint); font-size:12px;">(${escapeHtml(s.team)})</span></span>` +
-        `<span style="font-weight:700;">${s.count} golos</span></div>`
-      ).join('')
+      `<div style="display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px solid var(--line);">` +
+      `<span>${i + 1}. ${escapeHtml(s.name)} <span style="color:var(--ink-faint); font-size:12px;">(${escapeHtml(s.team)})</span></span>` +
+      `<span style="font-weight:700;">${s.count} golos</span></div>`
+    ).join('')
     : '<p class="empty" style="padding-top:20px;">Nenhum golo registado ainda.</p>';
 
   document.getElementById('dashboardScorers').innerHTML =
@@ -667,6 +667,78 @@ export function openConfirm(title, body, onConfirm) {
 export function closeConfirm() {
   dom.modalOverlay.hidden = true;
   confirmCallback = null;
+  // Reset danger-confirm button state
+  dom.modalConfirm.disabled = false;
+  dom.modalConfirm.style.opacity = '';
+  dom.modalConfirm.style.cursor = '';
+}
+
+/**
+ * Opens a danger-confirm modal that requires typing a secret word.
+ * @param {string} title
+ * @param {string[]} itemLabels — list of human-readable items being deleted
+ * @param {Function} onConfirm — called only when password matches
+ */
+export function openDangerConfirm(title, itemLabels, onConfirm) {
+  const secret = (import.meta.env.VITE_DELETE_SECRET || '').trim();
+
+  dom.modalTitle.textContent = title;
+
+  // Build body: summary list + password input
+  const listHtml = itemLabels.map(l => `<li>${escapeHtml(l)}</li>`).join('');
+  dom.modalBody.innerHTML =
+    `<p style="margin-bottom:6px;">Vais apagar permanentemente:</p>` +
+    `<ul class="danger-confirm-summary">${listHtml}</ul>` +
+    `<label style="font-size:13px;font-weight:600;color:var(--ink-soft);">Para confirmar, escreve a palavra-passe:</label>` +
+    `<input type="text" class="danger-confirm-input" id="dangerConfirmInput" autocomplete="off" spellcheck="false" placeholder="Palavra-passe…">`;
+
+  dom.modalCancel.innerHTML = 'Cancelar';
+  dom.modalCancel.style.background = 'var(--paper)';
+  dom.modalCancel.style.color = 'var(--ink)';
+  dom.modalCancel.hidden = false;
+
+  dom.modalConfirm.innerHTML = '🔒 Confirmar';
+  dom.modalConfirm.style.background = 'var(--danger)';
+  dom.modalConfirm.style.color = '#fff';
+  dom.modalConfirm.hidden = false;
+  dom.modalConfirm.style.display = '';
+  dom.modalConfirm.disabled = true;
+  dom.modalConfirm.style.opacity = '0.4';
+  dom.modalConfirm.style.cursor = 'not-allowed';
+
+  dom.modalOverlay.hidden = false;
+
+  const inp = document.getElementById('dangerConfirmInput');
+  if (inp) {
+    inp.focus();
+    inp.addEventListener('input', () => {
+      const match = inp.value.trim() === secret;
+      dom.modalConfirm.disabled = !match;
+      dom.modalConfirm.style.opacity = match ? '1' : '0.4';
+      dom.modalConfirm.style.cursor = match ? 'pointer' : 'not-allowed';
+      if (match) {
+        inp.classList.remove('danger-confirm-input--error');
+      }
+    });
+    inp.addEventListener('keydown', (e) => {
+      if (e.key === 'Enter' && !dom.modalConfirm.disabled) {
+        const cb = confirmCallback;
+        closeConfirm();
+        if (cb) cb();
+      } else if (e.key === 'Enter') {
+        inp.classList.add('danger-confirm-input--error');
+        setTimeout(() => inp.classList.remove('danger-confirm-input--error'), 500);
+      }
+    });
+  }
+
+  confirmCallback = () => {
+    // Reset button styles
+    dom.modalConfirm.disabled = false;
+    dom.modalConfirm.style.opacity = '';
+    dom.modalConfirm.style.cursor = '';
+    onConfirm();
+  };
 }
 
 export function openScorerModal(gi, side, onSelect) {
@@ -679,8 +751,8 @@ export function openScorerModal(gi, side, onSelect) {
 
   dom.modalBody.innerHTML = players.length
     ? players.map((p) =>
-        `<button class="btn btn-ghost scorer-btn" data-pid="${p.id}">${p.num} - ${escapeHtml(p.name)}</button>`
-      ).join('')
+      `<button class="btn btn-ghost scorer-btn" data-pid="${p.id}">${p.num} - ${escapeHtml(p.name)}</button>`
+    ).join('')
     : '<p class="empty" style="margin-bottom:14px;">Nenhum jogador registado nesta equipa.</p>';
 
   dom.modalCancel.innerHTML = '❌ Cancelar';

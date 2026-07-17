@@ -360,9 +360,51 @@
 
         <div class="card" style="border-color: var(--danger);">
           <div class="section-title" style="color: var(--danger);">🧹 Zona de Perigo</div>
-          <p class="section-sub">Apaga todos os resultados e estatísticas, mas mantém as tuas equipas, plantéis e
-            calendário.</p>
-          <button class="btn btn-danger" id="btnNovoTorneio" style="margin-top: 8px;">🧹 Começar Novo Torneio</button>
+          <p class="section-sub">Seleciona os dados que pretendes apagar. Jogadores e histórico de singulares estão protegidos.</p>
+
+          <div class="danger-checks">
+            <label class="danger-check">
+              <input type="checkbox" id="chkDeleteResults" checked>
+              <div>
+                <div class="danger-check__label">📊 Resultados e Classificação</div>
+                <div class="danger-check__desc">Apaga todos os resultados registados nos jogos do torneio</div>
+              </div>
+            </label>
+
+            <label class="danger-check">
+              <input type="checkbox" id="chkDeleteSchedule">
+              <div>
+                <div class="danger-check__label">📅 Calendário</div>
+                <div class="danger-check__desc">Apaga o calendário gerado (jornadas e jogos)</div>
+              </div>
+            </label>
+
+            <label class="danger-check">
+              <input type="checkbox" id="chkDeleteTeams">
+              <div>
+                <div class="danger-check__label">👕 Equipas e Plantéis</div>
+                <div class="danger-check__desc">Apaga nomes, cores e plantéis das equipas</div>
+              </div>
+            </label>
+
+            <label class="danger-check danger-check--locked">
+              <input type="checkbox" disabled>
+              <div>
+                <div class="danger-check__label">🔒 Jogadores (Base de Dados)</div>
+                <div class="danger-check__desc">Protegido — não pode ser apagado por aqui</div>
+              </div>
+            </label>
+
+            <label class="danger-check danger-check--locked">
+              <input type="checkbox" disabled>
+              <div>
+                <div class="danger-check__label">🔒 Histórico de Singulares</div>
+                <div class="danger-check__desc">Protegido — não pode ser apagado por aqui</div>
+              </div>
+            </label>
+          </div>
+
+          <button class="btn btn-danger" id="btnNovoTorneio" style="margin-top: 8px;">🧹 Apagar Dados Selecionados</button>
         </div>
       </section>
 

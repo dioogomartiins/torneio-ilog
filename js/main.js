@@ -1,5 +1,5 @@
-import { state, persistConfigTeams, loadState, persistSchedule, persistResults, persistBackup, persistPlayers, persistJogosSingulares, currentTheme, setCurrentTheme, exportJSON, importJSON, applyGeneratedSchedule, applySnapshot } from './state.js';
-import { dom, cacheDom, renderAll, refreshComputed, renderScheduleHint, renderSquadList, renderSquadsDropdown, renderCalendar, renderResults, showToast, flashSaved, openConfirm, closeConfirm, switchTab, confirmCallback, openScorerModal, openPlayerProfile, computeStatsSummary, renderPlayersList, openPlayerModal, renderSquadPlayerFromDBDropdown, renderDraftPlayerList, renderDraftTeams, renderSingularHistorico, currentDraft } from './ui.js';
+import { state, persistConfigTeams, loadState, persistSchedule, persistResults, persistBackup, persistPlayers, persistJogosSingulares, currentTheme, setCurrentTheme, exportJSON, importJSON, applyGeneratedSchedule, applySnapshot, defaultConfig, defaultTeams, defaultSquads } from './state.js';
+import { dom, cacheDom, renderAll, refreshComputed, renderScheduleHint, renderSquadList, renderSquadsDropdown, renderCalendar, renderResults, showToast, flashSaved, openConfirm, closeConfirm, openDangerConfirm, switchTab, confirmCallback, openScorerModal, openPlayerProfile, computeStatsSummary, renderPlayersList, openPlayerModal, renderSquadPlayerFromDBDropdown, renderDraftPlayerList, renderDraftTeams, renderSingularHistorico, currentDraft } from './ui.js';
 import { clamp, numOr } from './utils.js';
 import { bergerRounds, snakeDraft } from './algorithms.js';
 import { initFirebaseListener, onFirebaseStateChange } from './firebase.js';
@@ -268,16 +268,46 @@ export function onGerarCalendario() {
 }
 
 export function onNovoTorneio() {
-  openConfirm(
-    '🧹 Novo torneio',
-    'Isto apaga todos os resultados, a classificação e as estatísticas. As equipas, o plantel, a configuração e o calendário mantêm-se. Continuar?',
-    () => {
+  const chkResults = document.getElementById('chkDeleteResults');
+  const chkSchedule = document.getElementById('chkDeleteSchedule');
+  const chkTeams = document.getElementById('chkDeleteTeams');
+
+  const delResults = chkResults && chkResults.checked;
+  const delSchedule = chkSchedule && chkSchedule.checked;
+  const delTeams = chkTeams && chkTeams.checked;
+
+  if (!delResults && !delSchedule && !delTeams) {
+    showToast('Seleciona pelo menos uma categoria para apagar.', 'error');
+    return;
+  }
+
+  // Build summary labels
+  const labels = [];
+  if (delResults) labels.push('Resultados e Classificação');
+  if (delSchedule) labels.push('Calendário (jornadas e jogos)');
+  if (delTeams) labels.push('Equipas e Plantéis');
+
+  openDangerConfirm('🧹 Apagar Dados', labels, async () => {
+    if (delResults) {
       state.results = {};
-      persistResults();
-      renderAll();
-      showToast('Torneio reiniciado.', 'ok');
+      await persistResults();
     }
-  );
+    if (delSchedule) {
+      state.schedule = [];
+      state.roundsMeta = [];
+      state.scheduleTeamCount = 0;
+      state.scheduleVoltas = 0;
+      await persistSchedule();
+    }
+    if (delTeams) {
+      state.teams = defaultTeams();
+      state.squads = defaultSquads();
+      state.config = Object.assign(defaultConfig(), { numEquipas: state.config.numEquipas });
+      await persistConfigTeams();
+    }
+    renderAll();
+    showToast('Dados apagados com sucesso.', 'ok');
+  });
 }
 
 export function onAtualizar() {
